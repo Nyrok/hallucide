@@ -89,6 +89,10 @@ Affichage annoté (jamais de réponse brute non vérifiée)
 
 → Vrai/faux = 100% source. Les logprobs ne touchent le label QUE sur le résidu non-sourçable, + ciblage + affichage.
 
+**Score global de confiance** (piloté par les verdicts source, pas les logprobs). Indice pondéré : `score = Σ poids(statutᵢ) / n` avec poids **vérifié 1, inféré 0.3, incertain 0.1, faux 0**. Exemple (1 de chaque sur 4) : (1+0.3+0.1+0)/4 = **35 %**. Le crédit partiel reconnaît l'inféré (plausible) au-dessus de l'incertain, et met le faux à zéro. La gravité d'un faux reste signalée à part (alerte rouge).
+
+**Confiance du modèle (barre, par affirmation)** : `exp(mean logprob)` (moyenne géométrique des probas tokens), **pondérée sur les tokens factuels** (entités, nombres, dates, position de vote), optionnellement affinée par l'entropie des `top_logprobs` aux tokens-clés (`1 − H/Hmax`). Signal de stabilité interne, jamais un verdict.
+
 ## Données : format, stockage, interrogation
 
 **Format brut.** JSON imbriqué (pas tabulaire). Scrutin : `uid`, `numero`, `dateScrutin`, `titre`, `sort` (adopté/rejeté), `ventilationVotes → groupe → votants[] → {acteurRef, position}`. Député : `uid` (PA…), état civil, `mandats → groupe/circo`. CSV députés = **latin-1/Windows-1252** (transcoder UTF-8 à l'ingestion). Colonnes CSV : `identifiant;Prénom;Nom;Région;Département;Numéro circo;Profession;Groupe politique (complet);Groupe (abrégé)`.
