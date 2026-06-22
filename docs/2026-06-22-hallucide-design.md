@@ -110,15 +110,26 @@ autre     → pas de source → "incertain" (couche logprobs qualifie)
 **GraphRAG : rejeté.** Conçu pour extraire (via LLM) un graphe depuis du **texte non structuré** + sensemaking global. Nos données sont **déjà un graphe structuré officiel** (rien à extraire) et nos questions sont des lookups factuels précis. Pire : faire bâtir le graphe par un LLM **réintroduit l'hallucination** qu'Hallucide tue. Règle : donnée structurée → SQL direct ; vector/graph seulement pour du texte libre, en dernier recours.
 
 ## Interfaces externes — serveur MCP = contrat de vérification (BONUS build, cœur conceptuel)
-Hallucide s'expose comme **serveur MCP** définissant un **contrat de sortie vérifiable** : pour obtenir le tampon "vérifié", l'IA appelante DOIT fournir, par affirmation, son texte + ses **logprobs** + ses **sources alléguées**. Hallucide n'est pas un correcteur après coup, il **impose un standard**. C'est l'incarnation technique du "middleware" de la consigne, et ça résout le caveat logprobs (le tiers les fournit).
-
-Contrat `verify` :
+**Principe d'archi : une seule fonction de vérification, deux entrées.** Le pipeline est une **fonction pure** `verify(text, logprobs) → annotated`, appelée à l'identique par la boucle interne ET le serveur MCP. Pas de duplication, pas de "mode externe".
 ```
-verify({ claims: [{ text, tokens, logprobs, cited_sources:[{ref/url, quote?}] }] })
-→ { claims: [{ text, confidence, source_check:{cited_valid, grounded, official_source:{url,date}|null}, statut }],
+verify(text, logprobs):
+   claims = split(text, logprobs)            # affirmations + leurs logprobs
+   for c in claims:
+       c.confidence = layer1(c.logprobs)     # couche 1
+       c.source     = ground_in_our_db(c)    # couche 2 — NOS bdd officielles
+       c.statut     = merge(c.confidence, c.source)
+   return annotated(claims)
+```
+- **Entrée interne** : Mistral local génère → `(text, logprobs)` → `verify`.
+- **Entrée MCP** : IA tierce passe `(result, logprobs)` → même `verify`. Comme si on avait prompté nous-mêmes. Résout le caveat logprobs (le tiers les fournit).
+
+Contrat MCP `verify` — params essentiels = **`(result, logprobs)`** :
+```
+verify({ result, logprobs })
+→ { claims: [{ text, confidence, source:{grounded, official_source:{url,date}|null}, statut }],
     display_allowed }
 ```
-Autres tools : `check_vote(depute, scrutin)`, `get_depute(nom)`, `search_scrutins(sujet)`.
+`cited_sources` = **optionnel** (discipline anti-affirmation-sans-source + ciblage de la recherche). Le grounding réel = toujours NOS bdd, jamais la source fournie. Autres tools : `check_vote(depute, scrutin)`, `get_depute(nom)`, `search_scrutins(sujet)`.
 
 **Deux règles dures :**
 1. **On ne fait JAMAIS confiance aux sources fournies.** L'IA hallucine ses justifications (cf. consigne). La source alléguée = indice (où chercher), pas preuve. **Le juge = NOS bdd officielles** (SQLite open data). Grounding :
@@ -128,7 +139,7 @@ Autres tools : `check_vote(depute, scrutin)`, `get_depute(nom)`, `search_scrutin
    `vérifié` ⟺ `grounded==true` (reconfirmé sur l'officiel), jamais juste "source citée". Aucune source → `incertain`.
 2. **Logprobs captables seulement au niveau orchestrateur** (l'app qui appelle le LLM récupère les logprobs de l'API et les transmet). Pas un tool-call autonome d'un LLM nu. Hallucide se branche dans le pipeline de réponse de l'app hôte = la place d'un middleware.
 
-Pourquoi exiger les sources si on re-vérifie tout : (a) **discipline** (affirmation sans source = auto-flaggée), (b) **ciblage** (l'indice accélère la couche 2). Confirmation = toujours la nôtre.
+Pourquoi accepter des sources (optionnelles) si on re-vérifie tout : (a) **discipline** (affirmation sans source = signal faible de plus), (b) **ciblage** (l'indice accélère la couche 2). Confirmation = toujours la nôtre, sur nos bdd.
 
 **Ordre de build** : bonus, après la boucle interne + UI. Mais conceptuellement c'est le cœur d'Hallucide.
 
