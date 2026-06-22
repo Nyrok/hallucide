@@ -53,10 +53,15 @@
     @keyframes hd-flash { 0% { background: #FCEEAC; } 100% { background: transparent; } }
     /* Barre de confiance du modèle (stabilité interne, PAS la vérité, donc fill neutre) */
     .hd-bar { display: flex; align-items: center; gap: .6rem; font-size: .8rem; color: var(--text-mention-grey); margin-top: .25rem; }
-    .hd-bar__track { width: 130px; height: 6px; border-radius: 3px; background: var(--background-contrast-grey); overflow: hidden; flex: 0 0 auto; }
-    .hd-bar__fill { height: 100%; background: #000091; border-radius: 3px; }
+    .hd-bar__track { display: inline-block; width: 130px; height: 8px; border-radius: 4px; background: #EEEEEE; overflow: hidden; flex: 0 0 auto; }
+    .hd-bar__fill { display: block; height: 100%; background: #000091; border-radius: 4px; }
     /* Polish inspiré de Claude Design, ombre douce sur le résumé */
     .hd-summary { box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    /* Couleurs de statut unifiées, une seule source par statut (badges alignés sur bordures/soulignages/donut) */
+    .fr-badge--success { color: #18753C; background-color: #B8FEC9; }
+    .fr-badge--warning { color: #B34000; background-color: #FFE9A8; }
+    .fr-badge--error   { color: #CE0500; background-color: #FFE9E9; }
+    .hd-b--incertain   { color: #666666; background-color: #EEEEEE; }
   </style>
 </head>
 <body>
@@ -133,7 +138,7 @@
         <div class="hd-breakdown">
           <span class="fr-badge fr-badge--success fr-badge--sm">1 vérifiée</span>
           <span class="fr-badge fr-badge--warning fr-badge--sm">1 inférée</span>
-          <span class="fr-badge fr-badge--sm">1 incertaine</span>
+          <span class="fr-badge fr-badge--sm hd-b--incertain">1 incertaine</span>
           <span class="fr-badge fr-badge--error fr-badge--sm">1 fausse</span>
         </div>
         <p class="fr-text--sm fr-mb-0">
@@ -212,7 +217,7 @@
       <section class="fr-accordion hd-claim--incertain" data-claim="c4">
         <h3 class="fr-accordion__title">
           <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="acc-4">
-            <span class="fr-badge fr-badge--sm">Incertain</span>Il préside la commission des affaires économiques.
+            <span class="fr-badge fr-badge--sm hd-b--incertain">Incertain</span>Il préside la commission des affaires économiques.
           </button>
         </h3>
         <div class="fr-collapse" id="acc-4">
@@ -266,7 +271,7 @@
               <p class="fr-text--sm fr-mb-0 fr-mt-1w">Plausible, sans ancrage dans une source.</p>
             </div>
             <div class="hd-claim hd-claim--incertain fr-mb-0">
-              <p class="fr-badge fr-badge--sm">Incertain</p>
+              <p class="fr-badge fr-badge--sm hd-b--incertain">Incertain</p>
               <p class="fr-text--sm fr-mb-0 fr-mt-1w">Hors périmètre, non vérifiable.</p>
             </div>
             <div class="hd-claim hd-claim--faux fr-mb-0">
