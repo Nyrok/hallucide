@@ -48,6 +48,9 @@
     .hd-mark--infere   { text-decoration-color: #B34000; }
     .hd-mark--incertain{ text-decoration-color: #666666; }
     .hd-mark--faux     { text-decoration-color: #CE0500; text-decoration-style: wavy; }
+    .hd-mark:hover, .hd-mark:focus { background: var(--background-contrast-grey); outline: none; }
+    .hd-flash { animation: hd-flash 1.2s ease-out; }
+    @keyframes hd-flash { 0% { background: #FCEEAC; } 100% { background: transparent; } }
   </style>
 </head>
 <body>
@@ -98,10 +101,10 @@
     <!-- Réponse de Hallucide en prose (surlignage par statut) -->
     <h2 class="fr-h5 fr-mt-4w">Réponse de Hallucide</h2>
     <p class="hd-response fr-mb-4w">
-      <span class="hd-mark hd-mark--verifie" title="Vérifié">Marc Lemoine est député de la 5e circonscription de la Gironde.</span>
-      <span class="hd-mark hd-mark--faux" title="Faux, contredit par la source officielle">Lors du scrutin n°1842 du 21 novembre 2024, il a voté pour le projet de loi de finances 2025.</span>
-      <span class="hd-mark hd-mark--infere" title="Inféré">Il siège au sein du groupe Les Démocrates</span>
-      et <span class="hd-mark hd-mark--incertain" title="Incertain">préside la commission des affaires économiques.</span>
+      <span class="hd-mark hd-mark--verifie" data-claim="c1" role="button" tabindex="0" title="Vérifié, cliquer pour le détail">Marc Lemoine est député de la 5e circonscription de la Gironde.</span>
+      <span class="hd-mark hd-mark--faux" data-claim="c2" role="button" tabindex="0" title="Faux, cliquer pour le détail">Lors du scrutin n°1842 du 21 novembre 2024, il a voté pour le projet de loi de finances 2025.</span>
+      <span class="hd-mark hd-mark--infere" data-claim="c3" role="button" tabindex="0" title="Inféré, cliquer pour le détail">Il siège au sein du groupe Les Démocrates</span>
+      et <span class="hd-mark hd-mark--incertain" data-claim="c4" role="button" tabindex="0" title="Incertain, cliquer pour le détail">préside la commission des affaires économiques.</span>
     </p>
 
     <!-- Vérification : score global + détail collapsable -->
@@ -110,8 +113,15 @@
     <!-- Score global de confiance -->
     <div class="hd-summary">
       <div class="hd-score">
-        <span class="hd-score__num">25 %</span>
-        <span class="hd-score__label">Confiance globale</span>
+        <svg width="128" height="128" viewBox="0 0 120 120" role="img" aria-label="Confiance globale 25 pour cent">
+          <circle cx="60" cy="60" r="54" fill="none" stroke="var(--border-default-grey)" stroke-width="12"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#18753C" stroke-width="12" stroke-dasharray="80 259.3" transform="rotate(-90 60 60)"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#B34000" stroke-width="12" stroke-dasharray="80 259.3" transform="rotate(0 60 60)"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#666666" stroke-width="12" stroke-dasharray="80 259.3" transform="rotate(90 60 60)"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#CE0500" stroke-width="12" stroke-dasharray="80 259.3" transform="rotate(180 60 60)"/>
+          <text x="60" y="58" text-anchor="middle" font-size="26" font-weight="700" fill="#161616">25 %</text>
+          <text x="60" y="76" text-anchor="middle" font-size="10" fill="#666666">CONFIANCE</text>
+        </svg>
       </div>
       <div class="hd-summary__detail">
         <div class="hd-breakdown">
@@ -129,7 +139,7 @@
     <!-- Vérifications collapsables (accordéon DSFR) -->
     <div class="fr-accordions-group">
 
-      <section class="fr-accordion hd-claim--verifie">
+      <section class="fr-accordion hd-claim--verifie" data-claim="c1">
         <h3 class="fr-accordion__title">
           <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="acc-1">
             <span class="fr-badge fr-badge--success fr-badge--sm">Vérifié</span>Marc Lemoine est député de la 5e circonscription de la Gironde.
@@ -146,7 +156,7 @@
         </div>
       </section>
 
-      <section class="fr-accordion hd-claim--faux">
+      <section class="fr-accordion hd-claim--faux" data-claim="c2">
         <h3 class="fr-accordion__title">
           <button type="button" class="fr-accordion__btn" aria-expanded="true" aria-controls="acc-2">
             <span class="fr-badge fr-badge--error fr-badge--sm">Faux</span>Il a voté pour le projet de loi de finances 2025 (scrutin n°1842, 21 novembre 2024).
@@ -167,7 +177,7 @@
         </div>
       </section>
 
-      <section class="fr-accordion hd-claim--infere">
+      <section class="fr-accordion hd-claim--infere" data-claim="c3">
         <h3 class="fr-accordion__title">
           <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="acc-3">
             <span class="fr-badge fr-badge--warning fr-badge--sm">Inféré</span>Il siège au sein du groupe Les Démocrates.
@@ -181,7 +191,7 @@
         </div>
       </section>
 
-      <section class="fr-accordion hd-claim--incertain">
+      <section class="fr-accordion hd-claim--incertain" data-claim="c4">
         <h3 class="fr-accordion__title">
           <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="acc-4">
             <span class="fr-badge fr-badge--sm">Incertain</span>Il préside la commission des affaires économiques.
@@ -197,36 +207,98 @@
 
     </div>
 
-    <!-- Légende repliée (secondaire, pas le premier truc visible) -->
-    <section class="fr-accordion fr-mt-6w fr-mb-6w">
-      <h3 class="fr-accordion__title">
-        <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="acc-legende">Comprendre les statuts</button>
-      </h3>
-      <div class="fr-collapse" id="acc-legende">
-        <div class="hd-states fr-py-2w">
-          <div class="hd-claim hd-claim--verifie fr-mb-0">
-            <p class="fr-badge fr-badge--success fr-badge--sm">Vérifié</p>
-            <p class="fr-text--sm fr-mb-0 fr-mt-1w">Confirmé par une source officielle datée.</p>
-          </div>
-          <div class="hd-claim hd-claim--infere fr-mb-0">
-            <p class="fr-badge fr-badge--warning fr-badge--sm">Inféré</p>
-            <p class="fr-text--sm fr-mb-0 fr-mt-1w">Plausible, sans ancrage dans une source.</p>
-          </div>
-          <div class="hd-claim hd-claim--incertain fr-mb-0">
-            <p class="fr-badge fr-badge--sm">Incertain</p>
-            <p class="fr-text--sm fr-mb-0 fr-mt-1w">Hors périmètre, non vérifiable.</p>
-          </div>
-          <div class="hd-claim hd-claim--faux fr-mb-0">
-            <p class="fr-badge fr-badge--error fr-badge--sm">Faux</p>
-            <p class="fr-text--sm fr-mb-0 fr-mt-1w">Contredit par la source officielle.</p>
+    <!-- F.A.Q. (style site gouvernemental) -->
+    <h2 class="fr-h4 fr-mt-6w">Questions fréquentes</h2>
+    <div class="fr-accordions-group fr-mb-6w">
+
+      <section class="fr-accordion">
+        <h3 class="fr-accordion__title">
+          <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="faq-1">Comment Hallucide vérifie-t-elle ses réponses ?</button>
+        </h3>
+        <div class="fr-collapse" id="faq-1">
+          <p class="fr-py-1w fr-mb-0">Hallucide génère une réponse, la découpe en affirmations élémentaires, puis confronte chacune aux données officielles. Une couche analyse aussi la stabilité interne du modèle pour signaler les passages comblés. La réponse n'est affichée qu'annotée.</p>
+        </div>
+      </section>
+
+      <section class="fr-accordion">
+        <h3 class="fr-accordion__title">
+          <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="faq-2">D'où viennent les sources ?</button>
+        </h3>
+        <div class="fr-collapse" id="faq-2">
+          <p class="fr-py-1w fr-mb-0">De l'open data officiel de l'Assemblée nationale (scrutins, députés, mandats). Chaque affirmation vérifiée renvoie à la source datée correspondante sur data.assemblee-nationale.fr.</p>
+        </div>
+      </section>
+
+      <section class="fr-accordion">
+        <h3 class="fr-accordion__title">
+          <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="faq-3">Que signifient les statuts ?</button>
+        </h3>
+        <div class="fr-collapse" id="faq-3">
+          <div class="hd-states fr-py-2w">
+            <div class="hd-claim hd-claim--verifie fr-mb-0">
+              <p class="fr-badge fr-badge--success fr-badge--sm">Vérifié</p>
+              <p class="fr-text--sm fr-mb-0 fr-mt-1w">Confirmé par une source officielle datée.</p>
+            </div>
+            <div class="hd-claim hd-claim--infere fr-mb-0">
+              <p class="fr-badge fr-badge--warning fr-badge--sm">Inféré</p>
+              <p class="fr-text--sm fr-mb-0 fr-mt-1w">Plausible, sans ancrage dans une source.</p>
+            </div>
+            <div class="hd-claim hd-claim--incertain fr-mb-0">
+              <p class="fr-badge fr-badge--sm">Incertain</p>
+              <p class="fr-text--sm fr-mb-0 fr-mt-1w">Hors périmètre, non vérifiable.</p>
+            </div>
+            <div class="hd-claim hd-claim--faux fr-mb-0">
+              <p class="fr-badge fr-badge--error fr-badge--sm">Faux</p>
+              <p class="fr-text--sm fr-mb-0 fr-mt-1w">Contredit par la source officielle.</p>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section class="fr-accordion">
+        <h3 class="fr-accordion__title">
+          <button type="button" class="fr-accordion__btn" aria-expanded="false" aria-controls="faq-4">Hallucide peut-elle se tromper ?</button>
+        </h3>
+        <div class="fr-collapse" id="faq-4">
+          <p class="fr-py-1w fr-mb-0">Le modèle peut produire des erreurs, mais le verdict ne vient jamais du modèle : il vient de la source officielle. Ce qu'Hallucide ne peut pas confirmer, elle le marque incertain plutôt que de le présenter comme un fait.</p>
+        </div>
+      </section>
+
+    </div>
 
   </main>
 
   <script type="module" src="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/dsfr.module.min.js"></script>
   <script nomodule src="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/dsfr.nomodule.min.js"></script>
+  <script>
+    // Lien interactif prose <-> accordéon de vérification
+    document.addEventListener('DOMContentLoaded', function () {
+      function flash(el){ if(!el) return; el.classList.remove('hd-flash'); void el.offsetWidth; el.classList.add('hd-flash'); }
+
+      // Clic sur une affirmation surlignée -> ouvre et scrolle vers son accordéon
+      document.querySelectorAll('.hd-mark[data-claim]').forEach(function(mark){
+        function go(){
+          var id = mark.dataset.claim;
+          var sec = document.querySelector('section.fr-accordion[data-claim="'+id+'"]');
+          if(!sec) return;
+          var btn = sec.querySelector('.fr-accordion__btn');
+          if(btn && btn.getAttribute('aria-expanded') === 'false'){ btn.click(); }
+          sec.scrollIntoView({behavior:'smooth', block:'center'});
+          flash(sec.querySelector('.fr-accordion__title'));
+        }
+        mark.addEventListener('click', go);
+        mark.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); }});
+      });
+
+      // Clic sur un accordéon de vérification -> flash l'affirmation correspondante dans la prose
+      document.querySelectorAll('section.fr-accordion[data-claim] .fr-accordion__btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var sec = btn.closest('section.fr-accordion');
+          var id = sec && sec.dataset.claim;
+          if(id){ flash(document.querySelector('.hd-mark[data-claim="'+id+'"]')); }
+        });
+      });
+    });
+  </script>
 </body>
 </html>
