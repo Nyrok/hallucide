@@ -51,6 +51,12 @@
     .hd-mark:hover, .hd-mark:focus { background: var(--background-contrast-grey); outline: none; }
     .hd-flash { animation: hd-flash 1.2s ease-out; }
     @keyframes hd-flash { 0% { background: #FCEEAC; } 100% { background: transparent; } }
+    /* Barre de confiance du modèle (stabilité interne, PAS la vérité, donc fill neutre) */
+    .hd-bar { display: flex; align-items: center; gap: .6rem; font-size: .8rem; color: var(--text-mention-grey); margin-top: .25rem; }
+    .hd-bar__track { width: 130px; height: 6px; border-radius: 3px; background: var(--background-contrast-grey); overflow: hidden; flex: 0 0 auto; }
+    .hd-bar__fill { height: 100%; background: #000091; border-radius: 3px; }
+    /* Polish inspiré de Claude Design, ombre douce sur le résumé */
+    .hd-summary { box-shadow: 0 1px 4px rgba(0,0,0,.08); }
   </style>
 </head>
 <body>
@@ -151,7 +157,11 @@
                href="https://data.assemblee-nationale.fr/acteurs/deputes-en-exercice" target="_blank" rel="noopener">
               Mandats, Annuaire AN, 17e législature
             </a>
-            <span class="hd-conf"><span class="hd-dot hd-dot--stable"></span>Modèle stable ici</span>
+          </div>
+          <div class="hd-bar fr-pb-1w" title="Stabilité interne du modèle pendant la génération">
+            <span>Confiance du modèle</span>
+            <span class="hd-bar__track"><span class="hd-bar__fill" style="width:92%"></span></span>
+            <span>92 %</span>
           </div>
         </div>
       </section>
@@ -172,7 +182,11 @@
                href="https://data.assemblee-nationale.fr/travaux-parlementaires/votes" target="_blank" rel="noopener">
               Scrutin n°1842, 21 nov. 2024
             </a>
-            <span class="hd-conf"><span class="hd-dot hd-dot--stable"></span>Modèle stable ici, hallucination confiante</span>
+          </div>
+          <div class="hd-bar fr-pb-1w" title="Stabilité interne du modèle pendant la génération">
+            <span>Confiance du modèle</span>
+            <span class="hd-bar__track"><span class="hd-bar__fill" style="width:88%"></span></span>
+            <span>88 %, confiant mais faux</span>
           </div>
         </div>
       </section>
@@ -186,7 +200,11 @@
         <div class="fr-collapse" id="acc-3">
           <div class="hd-claim__meta fr-py-1w">
             <span class="fr-tag fr-tag--sm">Aucune source confirmée</span>
-            <span class="hd-conf"><span class="hd-dot hd-dot--instable"></span>Modèle instable ici</span>
+          </div>
+          <div class="hd-bar fr-pb-1w" title="Stabilité interne du modèle pendant la génération">
+            <span>Confiance du modèle</span>
+            <span class="hd-bar__track"><span class="hd-bar__fill" style="width:41%"></span></span>
+            <span>41 %, instable</span>
           </div>
         </div>
       </section>
@@ -200,7 +218,11 @@
         <div class="fr-collapse" id="acc-4">
           <div class="hd-claim__meta fr-py-1w">
             <span class="fr-tag fr-tag--sm">Hors périmètre des données chargées</span>
-            <span class="hd-conf"><span class="hd-dot hd-dot--instable"></span>Non vérifiable</span>
+          </div>
+          <div class="hd-bar fr-pb-1w" title="Stabilité interne du modèle pendant la génération">
+            <span>Confiance du modèle</span>
+            <span class="hd-bar__track"><span class="hd-bar__fill" style="width:38%"></span></span>
+            <span>38 %, instable</span>
           </div>
         </div>
       </section>
