@@ -22,9 +22,14 @@ Thèse centrale : les deux couches sont complémentaires, pas redondantes.
 - **Runtime** : **llama.cpp** (moteur CPU). Charge un modèle **Mistral GGUF**, expose les **logprobs** (`n_probs` sur `/completion`, ou `logprobs`/`top_logprobs` sur l'endpoint OpenAI-compat `/v1/chat/completions`). Backend FastAPI parle OpenAI-compat au serveur llama.cpp local.
   - Distinction clé : **modèle** (Mistral) et **runtime/moteur** (llama.cpp) sont orthogonaux. llama.cpp ≠ Llama : c'est un moteur CPU qui charge des poids Mistral. Le modèle reste 100% Mistral.
   - **Modèle retenu : Mistral-7B-Instruct GGUF Q4_K_M** (~4,5 Go RAM, ~5-10 tok/s sur ce CPU) — compromis vitesse/qualité pour la démo. Alternatives qui tiennent en 32 Go : Ministral-8B Q4, ou Mistral-Small-24B Q4 (~14 Go, ~2-3 tok/s, plus lent).
-- **Couche 2 (sources)** : serveur **MCP moulineuse** — endpoint réel **`https://mcp.code4code.eu/mcp`** (Streamable HTTP, **pas d'auth**, `mcp-session-id` retourné au handshake). ✅ Testé et fonctionnel le 2026-06-22 (la page `tricoteuses.fr/services/mcp-moulineuse` n'est que la doc ; Anubis ne bloque que les fetchers web, pas un vrai client MCP). On n'écrit aucun parseur XML/CSV : le backend est client MCP.
-  - Outils exposés : `search_recipes`/`list_recipes`/`get_recipe` (recettes métier, **commencer par là**), `search_legal_texts` (FTS Typesense `textes_juridiques`), `query_typesense`, `query_sql` (SQL sur la base `canutes`, schémas `assemblee`/`senat`/`annuaire`/`droits_*`), `list_tables`/`describe_table`/`get_json_schemas` (introspection), `list_parlement_items`/`get_parlement_item` (HTTP read-only vers `parlement.tricoteuses.fr`, + résumés IA pour questions/débats), `run_script`/`list_package_schemas`/`get_package_symbol_json_schema`/`get_typescript_types` (scripts TS).
-  - Stratégie couche 2 : `search_recipes` → `search_legal_texts` pour le sourçage rapide ; `query_sql` pour les faits structurés (votes, auteurs d'amendement, mandats).
+- **Couche 2 (sources)** : **open data officiel Assemblée nationale, chargé en SQLite local.** Source officielle, offline, sous notre contrôle, zéro dépendance tierce en démo. Narratif jury : "on ancre sur VOTRE open data officielle".
+  - Datasets (data.assemblee-nationale.fr) pour le scénario vote/député :
+    - **Députés en exercice** — `/acteurs/deputes-en-exercice` (CSV/XML)
+    - **Votes députés 17e** — `/travaux-parlementaires/votes` (XML/JSON)
+    - **Amendements 17e** — `/travaux-parlementaires/amendements/tous-les-amendements` (XML/JSON)
+  - Ingestion : télécharger les dumps → parser → **SQLite local** (+ table FTS5 pour la recherche plein texte). Étape one-shot au setup, pas pendant la requête.
+  - Couche 2 au runtime : chaque affirmation → requête SQLite locale (clé/valeur sur entités : nom du député, n° de scrutin, position de vote ; FTS5 pour le texte).
+  - **Archi générique à connecteurs** : interface `SourceConnector` ; une impl concrète = `AssembleeOpenData` (SQLite officiel). Le **MCP moulineuse** (`https://mcp.code4code.eu/mcp`, testé OK, pas d'auth) reste un **2e connecteur optionnel** pour élargir la couverture, pas requis pour le PoC.
 - **Backend** : Python FastAPI. Client modèle local (OpenAI-compat) + client MCP.
 - **Frontend** : Vite + React, **DSFR (Système de Design de l'État français)** : Marianne, bleu République `#000091`, composants officiels. Pas de design flompt.
 
@@ -42,8 +47,8 @@ Question user
 [2] Couche logprobs — score de confiance interne par affirmation
    │                   (faible proba moyenne / forte entropie = instable → "inféré")
    ▼
-[3] Couche source — chaque affirmation interrogée via MCP moulineuse
-   │                 (search_legal_texts / query_sql)
+[3] Couche source — chaque affirmation interrogée sur SQLite local (open data officiel)
+   │                 (lookup entités + FTS5)
    │                 trouvée + datée = vérifié / contredite = faux / rien = incertain
    ▼
 [4] Merge + annote — règle de fusion des deux couches → statut final
@@ -60,7 +65,8 @@ Affichage annoté (jamais de réponse brute non vérifiée)
 |-------|------|-----------------|-----------|
 | `llm_client` | Génère en JSON + expose logprobs | prompt → claims[] (texte + logprobs natifs par affirmation) | runtime local OpenAI-compat |
 | `confidence_layer` | Couche 1 | claim + ses logprobs → score [0,1] + flag instable | — |
-| `source_layer` | Couche 2 | claim → {statut: vérifié/faux/aucune, source datée} | client MCP moulineuse |
+| `ingest` (setup) | DL + parse dumps → SQLite | dumps XML/CSV officiels → base SQLite + FTS5 | open data Assemblée |
+| `source_layer` | Couche 2 (interface `SourceConnector`) | claim → {statut: vérifié/faux/aucune, source datée} | `AssembleeOpenData` (SQLite local) |
 | `merger` | Fusion des 2 couches | claim + score + verdict source → statut final | — |
 | `api` (FastAPI) | Orchestration | question → réponse annotée (JSON) | tout ci-dessus |
 | `frontend` (React/DSFR) | Affichage annoté | JSON → UI colorée + sources | api |
@@ -91,9 +97,9 @@ Le modèle local hallucine un **fait à entité précise** (nom de député inve
 - Pas de streaming token-par-token dans l'UI (réponse annotée d'un bloc).
 
 ## Risques connus
-- **llama.cpp/vLLM sur Mac** : vLLM tourne mal sur Apple Silicon → llama.cpp retenu. À confirmer au runtime.
-- **~~MCP moulineuse derrière Anubis~~** : ✅ résolu — endpoint `https://mcp.code4code.eu/mcp` testé OK, pas d'auth, handshake + tools/list fonctionnels.
+- **Débit CPU** : Mistral-7B Q4 sur 4 vCores → ~5-10 tok/s. Réponses de démo courtes pour rester fluide. Pré-charger le modèle au boot (pas de cold start pendant la démo).
 - **~~Alignement des spans de logprobs~~** : ✅ résolu par la génération-en-affirmations single-pass (logprobs natifs par affirmation).
 - **Bruit des logprobs** : couche 1 peu fiable seule (cf. scénario démo). La couche source porte la démo.
-- **Filet offline pour la démo** : pré-charger le dataset du scénario (dump CSV/XML `data.assemblee-nationale.fr`, hors Anubis) en SQLite local, pour ne pas dépendre du réseau MCP pendant le passage jury. Le connecteur MCP reste l'implémentation par défaut ; le dump est le secours.
+- **Source 100% locale** : open data officiel pré-chargé en SQLite → **aucune dépendance réseau pendant la démo jury**. (Le MCP moulineuse, testé OK, reste un connecteur optionnel.)
+- **Parsing XML open data** : les dumps Assemblée sont volumineux et imbriqués. Limiter l'ingestion aux datasets du scénario (députés + votes 17e), pas toute la base.
 - **Licence DSFR** : réservée à l'usage de l'État. OK pour un hackathon organisé par l'Assemblée ; ne pas publier publiquement comme si c'était state-endorsed.
