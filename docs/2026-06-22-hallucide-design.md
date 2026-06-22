@@ -23,10 +23,12 @@ Thèse centrale : les deux couches sont complémentaires, pas redondantes.
   - Distinction clé : **modèle** (Mistral) et **runtime/moteur** (llama.cpp) sont orthogonaux. llama.cpp ≠ Llama : c'est un moteur CPU qui charge des poids Mistral. Le modèle reste 100% Mistral.
   - **Modèle retenu : Mistral-7B-Instruct GGUF Q4_K_M** (~4,5 Go RAM, ~5-10 tok/s sur ce CPU) — compromis vitesse/qualité pour la démo. Alternatives qui tiennent en 32 Go : Ministral-8B Q4, ou Mistral-Small-24B Q4 (~14 Go, ~2-3 tok/s, plus lent).
 - **Couche 2 (sources)** : **open data officiel Assemblée nationale, chargé en SQLite local.** Source officielle, offline, sous notre contrôle, zéro dépendance tierce en démo. Narratif jury : "on ancre sur VOTRE open data officielle".
-  - Datasets (data.assemblee-nationale.fr) pour le scénario vote/député :
-    - **Députés en exercice** — `/acteurs/deputes-en-exercice` (CSV/XML)
-    - **Votes députés 17e** — `/travaux-parlementaires/votes` (XML/JSON)
-    - **Amendements 17e** — `/travaux-parlementaires/amendements/tous-les-amendements` (XML/JSON)
+  - Datasets à télécharger (base `https://data.assemblee-nationale.fr`, 17e légis., JSON.zip) — **PoC = Scrutins + Députés (~27 Mo)** :
+    - **Scrutins (votes)** — `/static/openData/repository/17/loi/scrutins/Scrutins.json.zip` (22,5 Mo) ✅
+    - **Députés actifs + mandats** — `/static/openData/repository/17/amo/deputes_actifs_mandats_actifs_organes/AMO10_deputes_actifs_mandats_actifs_organes.json.zip` (4,7 Mo) ✅
+    - Liste députés CSV simple — `/static/openData/repository/17/amo/deputes_actifs_csv_opendata/liste_deputes_excel.csv` (76 Ko) — alt légère
+    - Amendements — `/static/openData/repository/17/loi/amendements_div_legis/Amendements.json.zip` (269 Mo ⚠️) — **skip** sauf scénario amendement
+  - Catalogue complet dispo (off-scope démo) : débats/comptes rendus, questions gouvernement, agenda, historique députés ; Sénat ; DILA/Légifrance (LEGI, DOLE, JORF) ; OpenFisca. Branchables via `SourceConnector`.
   - Ingestion : télécharger les dumps → parser → **SQLite local** (+ table FTS5 pour la recherche plein texte). Étape one-shot au setup, pas pendant la requête.
   - Couche 2 au runtime : chaque affirmation → requête SQLite locale (clé/valeur sur entités : nom du député, n° de scrutin, position de vote ; FTS5 pour le texte).
   - **Archi générique à connecteurs** : interface `SourceConnector` ; une impl concrète = `AssembleeOpenData` (SQLite officiel). Le **MCP moulineuse** (`https://mcp.code4code.eu/mcp`, testé OK, pas d'auth) reste un **2e connecteur optionnel** pour élargir la couverture, pas requis pour le PoC.
@@ -81,6 +83,54 @@ Affichage annoté (jamais de réponse brute non vérifiée)
 | instable | aucune source | 🔴 incertain |
 
 Principe : **la source datée prime toujours** sur la confiance interne. Les logprobs ne servent qu'à qualifier le non-sourçable.
+
+## Données : format, stockage, interrogation
+
+**Format brut.** JSON imbriqué (pas tabulaire). Scrutin : `uid`, `numero`, `dateScrutin`, `titre`, `sort` (adopté/rejeté), `ventilationVotes → groupe → votants[] → {acteurRef, position}`. Député : `uid` (PA…), état civil, `mandats → groupe/circo`. CSV députés = **latin-1/Windows-1252** (transcoder UTF-8 à l'ingestion). Colonnes CSV : `identifiant;Prénom;Nom;Région;Département;Numéro circo;Profession;Groupe politique (complet);Groupe (abrégé)`.
+
+**Stockage : SQLite normalisé** (aplati une fois à l'ingestion).
+```
+deputes(uid, nom, prenom, groupe, circo, profession)
+scrutins(uid, numero, date, titre, sort)
+votes(scrutin_uid, depute_uid, position)        -- pour/contre/abstention/nonVotant
+index : votes(scrutin_uid, depute_uid), deputes(nom)
+FTS5  : deputes_fts(nom), scrutins_fts(titre)    -- résolution floue nom/titre
+```
+
+**Vitesse.** Dataset minuscule (~600 députés, ~1000 scrutins, ~100k lignes de vote). SQLite indexé répond <1 ms. Le goulot = génération LLM CPU (secondes), pas la source. **SQL ~1000× plus rapide que nécessaire.**
+
+**Routage (arbre de décision).** La génération single-pass émet chaque affirmation déjà typée + entités extraites : `{text, type, entities:{depute?,scrutin?,position?,attribut?}, logprobs}`. Le `SourceConnector` route sur `type` :
+```
+vote      → FTS nom→depute_uid + numéro/FTS titre→scrutin_uid → SQL votes → comparer position
+identite  → FTS nom→depute_uid → SQL deputes → comparer attribut
+texte/loi → FTS5 titres scrutins (+ Légifrance si branché plus tard)
+autre     → pas de source → "incertain" (couche logprobs qualifie)
+```
+
+**GraphRAG : rejeté.** Conçu pour extraire (via LLM) un graphe depuis du **texte non structuré** + sensemaking global. Nos données sont **déjà un graphe structuré officiel** (rien à extraire) et nos questions sont des lookups factuels précis. Pire : faire bâtir le graphe par un LLM **réintroduit l'hallucination** qu'Hallucide tue. Règle : donnée structurée → SQL direct ; vector/graph seulement pour du texte libre, en dernier recours.
+
+## Interfaces externes — serveur MCP = contrat de vérification (BONUS build, cœur conceptuel)
+Hallucide s'expose comme **serveur MCP** définissant un **contrat de sortie vérifiable** : pour obtenir le tampon "vérifié", l'IA appelante DOIT fournir, par affirmation, son texte + ses **logprobs** + ses **sources alléguées**. Hallucide n'est pas un correcteur après coup, il **impose un standard**. C'est l'incarnation technique du "middleware" de la consigne, et ça résout le caveat logprobs (le tiers les fournit).
+
+Contrat `verify` :
+```
+verify({ claims: [{ text, tokens, logprobs, cited_sources:[{ref/url, quote?}] }] })
+→ { claims: [{ text, confidence, source_check:{cited_valid, grounded, official_source:{url,date}|null}, statut }],
+    display_allowed }
+```
+Autres tools : `check_vote(depute, scrutin)`, `get_depute(nom)`, `search_scrutins(sujet)`.
+
+**Deux règles dures :**
+1. **On ne fait JAMAIS confiance aux sources fournies.** L'IA hallucine ses justifications (cf. consigne). La source alléguée = indice (où chercher), pas preuve. **Le juge = NOS bdd officielles** (SQLite open data). Grounding :
+   - fait trouvé + concorde → `grounded=true` → 🟢 vérifié (on renvoie NOTRE url officielle datée)
+   - fait trouvé + contredit → 🔴 faux (refus d'affichage)
+   - hors couverture bdd → 🟠 incertain
+   `vérifié` ⟺ `grounded==true` (reconfirmé sur l'officiel), jamais juste "source citée". Aucune source → `incertain`.
+2. **Logprobs captables seulement au niveau orchestrateur** (l'app qui appelle le LLM récupère les logprobs de l'API et les transmet). Pas un tool-call autonome d'un LLM nu. Hallucide se branche dans le pipeline de réponse de l'app hôte = la place d'un middleware.
+
+Pourquoi exiger les sources si on re-vérifie tout : (a) **discipline** (affirmation sans source = auto-flaggée), (b) **ciblage** (l'indice accélère la couche 2). Confirmation = toujours la nôtre.
+
+**Ordre de build** : bonus, après la boucle interne + UI. Mais conceptuellement c'est le cœur d'Hallucide.
 
 ## Scénario démo (jury)
 Question type : *"Le député X a-t-il voté pour la loi Y ?"* ou *"Qui a déposé l'amendement Z ?"*.
