@@ -129,7 +129,19 @@ verify({ result, logprobs })
 → { claims: [{ text, confidence, source:{grounded, official_source:{url,date}|null}, statut }],
     display_allowed }
 ```
-`cited_sources` = **optionnel** (discipline anti-affirmation-sans-source + ciblage de la recherche). Le grounding réel = toujours NOS bdd, jamais la source fournie. Autres tools : `check_vote(depute, scrutin)`, `get_depute(nom)`, `search_scrutins(sujet)`.
+`cited_sources` = **optionnel** (discipline anti-affirmation-sans-source + ciblage de la recherche). Le grounding réel = toujours NOS bdd, jamais la source fournie.
+
+**Deux rôles MCP :**
+- `verify(result, logprobs)` — **réactif** : vérifier ce que l'IA a déjà produit.
+- `query(...)` — **proactif** : fournir les faits officiels datés à l'IA pour qu'elle **n'hallucine pas dès le départ** (ground avant de parler).
+```
+query("comment a voté le député X sur le scrutin Y ?")
+→ { answer, official_source:{url, date}, confidence }
+```
+Forme = **langage naturel** (simple pour l'IA), réutilise l'extraction d'entités du pipeline → SQL paramétré interne. Variante structurée dispo : `query({type, depute?, scrutin?})`.
+**Sécu : jamais de SQL brut exposé** au tiers (injection) — `query` est typé/NL, SQL paramétré en interne uniquement.
+
+Autres tools : `check_vote(depute, scrutin)`, `get_depute(nom)`, `search_scrutins(sujet)`.
 
 **Deux règles dures :**
 1. **On ne fait JAMAIS confiance aux sources fournies.** L'IA hallucine ses justifications (cf. consigne). La source alléguée = indice (où chercher), pas preuve. **Le juge = NOS bdd officielles** (SQLite open data). Grounding :
