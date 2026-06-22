@@ -89,7 +89,11 @@ Affichage annoté (jamais de réponse brute non vérifiée)
 
 → Vrai/faux = 100% source. Les logprobs ne touchent le label QUE sur le résidu non-sourçable, + ciblage + affichage.
 
-**Score global de confiance** (piloté par les verdicts source, pas les logprobs). Indice pondéré : `score = Σ poids(statutᵢ) / n` avec poids **vérifié 1, inféré 0.3, incertain 0.1, faux 0**. Exemple (1 de chaque sur 4) : (1+0.3+0.1+0)/4 = **35 %**. Le crédit partiel reconnaît l'inféré (plausible) au-dessus de l'incertain, et met le faux à zéro. La gravité d'un faux reste signalée à part (alerte rouge).
+**Score global de confiance** (piloté par les verdicts source, pas les logprobs). Indice pondéré **par statut ET par longueur** de chaque affirmation :
+```
+score = Σ ( poids(statutᵢ) · longueurᵢ ) / Σ longueurᵢ
+```
+poids **vérifié 1, inféré 0.3, incertain 0.1, faux 0** ; longueurᵢ = nb de tokens de l'affirmation. La pondération par longueur évite qu'un petit fragment faux (ex: 5 % du texte) effondre tout le score. Exemple mock (tokens ≈ 13/22/9/8) : (1·13+0·22+0.3·9+0.1·8)/52 ≈ **32 %**. Le crédit partiel reconnaît l'inféré au-dessus de l'incertain, le faux à zéro. La gravité d'un faux reste signalée à part (alerte rouge). Les arcs du donut sont aussi proportionnels à la longueur.
 
 **Confiance du modèle (barre, par affirmation)** : `exp(mean logprob)` (moyenne géométrique des probas tokens), **pondérée sur les tokens factuels** (entités, nombres, dates, position de vote), optionnellement affinée par l'entropie des `top_logprobs` aux tokens-clés (`1 − H/Hmax`). Signal de stabilité interne, jamais un verdict.
 

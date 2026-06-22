@@ -124,14 +124,15 @@
     <!-- Score global de confiance -->
     <div class="hd-summary">
       <div class="hd-score">
-        <svg width="128" height="128" viewBox="0 0 120 120" role="img" aria-label="Confiance globale 35 pour cent">
-          <title>Indice de confiance pondéré par statut</title>
+        <svg width="128" height="128" viewBox="0 0 120 120" role="img" aria-label="Confiance globale 32 pour cent">
+          <title>Indice de confiance pondéré par statut et longueur des affirmations</title>
           <circle cx="60" cy="60" r="54" fill="none" stroke="var(--border-default-grey)" stroke-width="12"/>
-          <circle cx="60" cy="60" r="54" fill="none" stroke="#18753C" stroke-width="12" stroke-dasharray="80 259.3" transform="rotate(-90 60 60)"/>
-          <circle cx="60" cy="60" r="54" fill="none" stroke="#B34000" stroke-width="12" stroke-dasharray="80 259.3" transform="rotate(0 60 60)"/>
-          <circle cx="60" cy="60" r="54" fill="none" stroke="#666666" stroke-width="12" stroke-dasharray="80 259.3" transform="rotate(90 60 60)"/>
-          <circle cx="60" cy="60" r="54" fill="none" stroke="#CE0500" stroke-width="12" stroke-dasharray="80 259.3" transform="rotate(180 60 60)"/>
-          <text x="60" y="58" text-anchor="middle" font-size="26" font-weight="700" fill="#161616">35 %</text>
+          <!-- arcs proportionnels à la longueur de chaque affirmation -->
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#18753C" stroke-width="12" stroke-dasharray="82.8 256.5" transform="rotate(-90 60 60)"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#CE0500" stroke-width="12" stroke-dasharray="141.5 197.8" transform="rotate(0 60 60)"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#B34000" stroke-width="12" stroke-dasharray="56.7 282.6" transform="rotate(152.3 60 60)"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#666666" stroke-width="12" stroke-dasharray="50.2 289.1" transform="rotate(214.6 60 60)"/>
+          <text x="60" y="58" text-anchor="middle" font-size="26" font-weight="700" fill="#161616">32 %</text>
           <text x="60" y="76" text-anchor="middle" font-size="10" fill="#666666">CONFIANCE</text>
         </svg>
       </div>
