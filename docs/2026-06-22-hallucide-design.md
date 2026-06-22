@@ -8,6 +8,10 @@ Hackathon "IA et Hallucination", défi Assemblée nationale. Porteur : Hamza Kon
 ## Problème (consigne)
 Les IA génératives produisent des réponses inexactes ou non sourcées, et hallucinent jusqu'à leurs propres justifications : une illusion de fiabilité sans ancrage réel. En contexte institutionnel, distinguer une info vérifiée d'un contenu généré est difficile.
 
+## Positionnement (assumé)
+Hallucide est une **couche de confiance par détection + annotation**, fidèle à la consigne ("la réponse n'est affichée qu'annotée"). Il **ne prévient pas** la génération d'hallucinations et **ne corrige pas** le texte. Ce qu'il tue = **l'illusion de fiabilité** : toute affirmation non ancrée est visiblement marquée 🟠/🔴, donc ne peut plus se faire passer pour un fait. L'utilisateur ne reçoit jamais une hallucination estampillée "vraie". C'est le sens du "-cide" : on tue la fausse fiabilité, pas la sortie brute.
+**Hors scope (différé)** : correction/remplacement par le fait officiel, suppression d'affirmations, prévention par RAG. (RAG existe en germe via le tool `query` proactif, mais la démo veut montrer la détection d'une hallucination, pas l'éviter.)
+
 ## Solution
 Un **middleware de confiance** entre l'IA et l'utilisateur. La réponse est interceptée avant affichage, découpée en affirmations atomiques, puis passée par deux couches complémentaires, et n'est affichée qu'annotée : **vérifié / inféré / incertain**.
 
@@ -74,15 +78,16 @@ Affichage annoté (jamais de réponse brute non vérifiée)
 | `frontend` (React/DSFR) | Affichage annoté | JSON → UI colorée + sources | api |
 
 ## Règle de fusion (merger)
-| Couche 1 (logprobs) | Couche 2 (source) | Statut final |
-|---------------------|-------------------|--------------|
-| stable | source confirme | 🟢 vérifié |
-| stable | source contredit | 🔴 faux (priorité source) |
-| stable | aucune source | 🟠 inféré (confiant mais non ancré) |
-| instable | source confirme | 🟢 vérifié (source l'emporte) |
-| instable | aucune source | 🔴 incertain |
+**Principe dur : les logprobs ne décident JAMAIS vrai/faux. Seule la source juge.** Raison : logprobs bruités (valeur basse = souvent choix de synonyme, pas doute factuel) et une hallucination *confiante* score haut. Les logprobs servent à : (a) **cibler/trier** quelles affirmations vérifier en priorité, (b) **qualifier le résidu non-sourçable**, (c) **afficher** un badge "modèle instable ici".
 
-Principe : **la source datée prime toujours** sur la confiance interne. Les logprobs ne servent qu'à qualifier le non-sourçable.
+| Verdict source | Logprobs | Statut | Rôle logprobs |
+|----------------|----------|--------|----------------|
+| confirme | peu importe | 🟢 vérifié | **ignoré** |
+| contredit | peu importe | 🔴 faux | **ignoré** |
+| hors bdd / aucune source | haute conf | 🟠 inféré (non vérifiable) | qualifie le résidu |
+| hors bdd / aucune source | basse conf | 🔴 probablement inventé | qualifie le résidu |
+
+→ Vrai/faux = 100% source. Les logprobs ne touchent le label QUE sur le résidu non-sourçable, + ciblage + affichage.
 
 ## Données : format, stockage, interrogation
 
