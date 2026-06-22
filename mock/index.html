@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr" data-fr-scheme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hallucide, vérifier l'IA contre les sources officielles</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr/dist/dsfr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr/dist/utility/utility.min.css">
+  <style>
+    /* Cartes d'affirmation : accent gauche par statut, le reste est du DSFR pur */
+    .hd-claim { border: 1px solid var(--border-default-grey); border-left-width: .25rem;
+                border-radius: .25rem; padding: 1rem 1.25rem; margin-bottom: 1rem;
+                background: var(--background-default-grey); }
+    .hd-claim--verifie  { border-left-color: #18753C; }
+    .hd-claim--infere   { border-left-color: #B34000; }
+    .hd-claim--incertain{ border-left-color: #666666; }
+    .hd-claim--faux     { border-left-color: #CE0500; }
+    .hd-claim__text { font-size: 1.05rem; margin: .25rem 0 .75rem; }
+    .hd-claim__meta { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; }
+    .hd-conf { font-size: .8rem; color: var(--text-mention-grey); display: inline-flex; align-items: center; gap: .35rem; }
+    .hd-dot { width: .6rem; height: .6rem; border-radius: 50%; display: inline-block; }
+    .hd-dot--stable   { background: #18753C; }
+    .hd-dot--instable { background: #B34000; }
+    .hd-correction { font-size: .9rem; color: #CE0500; margin-top: .5rem; }
+    .hd-states { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+  </style>
+</head>
+<body>
+  <!-- En-tête DSFR officiel -->
+  <header role="banner" class="fr-header">
+    <div class="fr-header__body">
+      <div class="fr-container">
+        <div class="fr-header__body-row">
+          <div class="fr-header__brand fr-enlarge-link">
+            <div class="fr-header__brand-top">
+              <div class="fr-header__logo">
+                <p class="fr-logo">République<br>Française</p>
+              </div>
+            </div>
+            <div class="fr-header__service">
+              <a href="/" title="Accueil Hallucide">
+                <p class="fr-header__service-title">Hallucide</p>
+              </a>
+              <p class="fr-header__service-tagline">Vérifier l'IA contre les sources officielles</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="fr-container fr-my-6w">
+
+    <div class="fr-mb-2w">
+      <h1 class="fr-h3">Vérification d'une réponse d'IA</h1>
+      <p class="fr-text--sm fr-mb-0" style="color: var(--text-mention-grey)">
+        Démonstration, données fictives. Chaque affirmation est confrontée à l'open data de l'Assemblée nationale.
+      </p>
+    </div>
+
+    <!-- Question posée -->
+    <div class="fr-input-group fr-mb-2w">
+      <label class="fr-label" for="question">Question posée à l'IA
+        <span class="fr-hint-text">L'IA répond, Hallucide vérifie avant affichage.</span>
+      </label>
+      <div class="fr-search-bar" role="search">
+        <input class="fr-input" id="question" type="search"
+               value="Le député Marc Lemoine a-t-il voté pour le projet de loi de finances 2025 ?">
+        <button class="fr-btn" type="button">Vérifier</button>
+      </div>
+    </div>
+
+    <!-- Réponse décomposée -->
+    <h2 class="fr-h5 fr-mt-4w">Réponse de l'IA, vérifiée affirmation par affirmation</h2>
+
+    <!-- 1. Vérifié -->
+    <div class="hd-claim hd-claim--verifie">
+      <p class="fr-badge fr-badge--success fr-badge--sm">Vérifié</p>
+      <p class="hd-claim__text">Marc Lemoine est député de la 5e circonscription de la Gironde.</p>
+      <div class="hd-claim__meta">
+        <a class="fr-tag fr-tag--sm fr-icon-external-link-line fr-tag--icon-left"
+           href="https://data.assemblee-nationale.fr/acteurs/deputes-en-exercice" target="_blank" rel="noopener">
+          Mandats, Annuaire AN, 17e législature
+        </a>
+        <span class="hd-conf"><span class="hd-dot hd-dot--stable"></span>Modèle stable ici</span>
+      </div>
+    </div>
+
+    <!-- 2. Faux / contredit -->
+    <div class="hd-claim hd-claim--faux">
+      <p class="fr-badge fr-badge--error fr-badge--sm">Faux</p>
+      <p class="hd-claim__text">Il a voté pour le projet de loi de finances 2025 (scrutin n°1842, 21 novembre 2024).</p>
+      <p class="hd-correction">
+        <span class="fr-icon-close-circle-fill" aria-hidden="true"></span>
+        Contredit par la source officielle, position réelle, <strong>Contre</strong>.
+      </p>
+      <div class="hd-claim__meta">
+        <a class="fr-tag fr-tag--sm fr-icon-external-link-line fr-tag--icon-left"
+           href="https://data.assemblee-nationale.fr/travaux-parlementaires/votes" target="_blank" rel="noopener">
+          Scrutin n°1842, 21 nov. 2024
+        </a>
+        <span class="hd-conf"><span class="hd-dot hd-dot--stable"></span>Modèle stable ici (hallucination confiante)</span>
+      </div>
+    </div>
+
+    <!-- 3. Inféré -->
+    <div class="hd-claim hd-claim--infere">
+      <p class="fr-badge fr-badge--warning fr-badge--sm">Inféré</p>
+      <p class="hd-claim__text">Il siège au sein du groupe Les Démocrates.</p>
+      <div class="hd-claim__meta">
+        <span class="fr-tag fr-tag--sm">Aucune source confirmée</span>
+        <span class="hd-conf"><span class="hd-dot hd-dot--instable"></span>Modèle instable ici</span>
+      </div>
+    </div>
+
+    <!-- 4. Incertain -->
+    <div class="hd-claim hd-claim--incertain">
+      <p class="fr-badge fr-badge--sm">Incertain</p>
+      <p class="hd-claim__text">Il préside la commission des affaires économiques.</p>
+      <div class="hd-claim__meta">
+        <span class="fr-tag fr-tag--sm">Hors périmètre des données chargées</span>
+        <span class="hd-conf"><span class="hd-dot hd-dot--instable"></span>Non vérifiable</span>
+      </div>
+    </div>
+
+    <!-- Légende des 4 états -->
+    <h2 class="fr-h5 fr-mt-6w">Les quatre états</h2>
+    <div class="hd-states fr-mb-6w">
+      <div class="hd-claim hd-claim--verifie fr-mb-0">
+        <p class="fr-badge fr-badge--success fr-badge--sm">Vérifié</p>
+        <p class="fr-text--sm fr-mb-0 fr-mt-1w">Confirmé par une source officielle datée.</p>
+      </div>
+      <div class="hd-claim hd-claim--infere fr-mb-0">
+        <p class="fr-badge fr-badge--warning fr-badge--sm">Inféré</p>
+        <p class="fr-text--sm fr-mb-0 fr-mt-1w">Plausible, sans ancrage dans une source.</p>
+      </div>
+      <div class="hd-claim hd-claim--incertain fr-mb-0">
+        <p class="fr-badge fr-badge--sm">Incertain</p>
+        <p class="fr-text--sm fr-mb-0 fr-mt-1w">Hors périmètre, non vérifiable.</p>
+      </div>
+      <div class="hd-claim hd-claim--faux fr-mb-0">
+        <p class="fr-badge fr-badge--error fr-badge--sm">Faux</p>
+        <p class="fr-text--sm fr-mb-0 fr-mt-1w">Contredit par la source officielle.</p>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr/dist/dsfr.module.min.js"></script>
+  <script nomodule src="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr/dist/dsfr.nomodule.min.js"></script>
+</body>
+</html>
