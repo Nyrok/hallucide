@@ -143,6 +143,22 @@ Pourquoi accepter des sources (optionnelles) si on re-vérifie tout : (a) **disc
 
 **Ordre de build** : bonus, après la boucle interne + UI. Mais conceptuellement c'est le cœur d'Hallucide.
 
+## Vérification temporelle des sources
+Les faits sont indexés dans le temps (consigne : "seule la source datée démasque les faits obsolètes"). Règles :
+- **Identité = ID stables, jamais le titre** : scrutin → `numero`/`uid`, député → `uid` (PA…), + date. Le titre ne sert qu'à l'entrée floue (FTS5), puis résolution immédiate vers l'ID.
+- **Fait-événement** ("a voté pour Y") → scrutin unique daté. **Fait-état** ("est au groupe GDR") → vérifié contre l'état valide à la date de référence (mandats datés).
+- La décompose extrait la temporalité : `claim = {text, type, entities, date_ref: date|null}`.
+- **Règle de résolution** :
+```
+lookup(claim) → enregistrements correspondants + dates
+  1 match                      → vérifier
+  N matches + date_ref         → enreg. valide à date_ref (état) / dont date==date_ref (événement)
+  N matches + pas de date_ref  → concordent → 🟢 ; divergent → 🟠 ambigu + afficher candidats datés
+  0 match                      → 🟠 incertain
+```
+- **Éthique (anti-hallucination appliqué à nous)** : si on ne peut pas épingler un enregistrement **unique et daté**, on ne tamponne PAS "vérifié" → "ambigu" + candidats. On refuse de certifier sa propre certitude.
+- "Deux sources concurrentes" n'existe quasi pas : une seule autorité (open data officiel) avec plusieurs enregistrements datés ; ambiguïté interne réglée par scoping temporel + ID. Le cas multi-sources contradictoires = post-PoC (plusieurs connecteurs).
+
 ## Scénario démo (jury)
 Question type : *"Le député X a-t-il voté pour la loi Y ?"* ou *"Qui a déposé l'amendement Z ?"*.
 Le modèle local hallucine un **fait à entité précise** (nom de député inventé, mauvais numéro/date de scrutin) → le MCP Assemblée récupère le vrai vote daté → l'affirmation inventée passe 🔴, la correcte 🟢.
