@@ -196,8 +196,8 @@ function render(data) {
   if (data.echo_back) html += `<div class="card"><b>Intentions détectées :</b><div class="passage">${data.echo_back}</div>
     <span class="meta">Couverture : ${(data.coverage_ratio*100).toFixed(0)}% ${data.coverage_passed?'✓':'⚠ intention possiblement oubliée'}</span></div>`;
 
-  (data.intents||[]).forEach(it => {
-    const pub = it.published ? '<span class="ok">PUBLIABLE</span>' : '<span class="blocked">NON PUBLIABLE (validation humaine requise)</span>';
+  window._intents = data.intents || [];
+  (data.intents||[]).forEach((it, i) => {
     const noAnswer = it.compliance_status === 'NO_ANSWER';
     const blocked = it.compliance_status === 'BLOCKED';
     const statusClass = noAnswer ? 'warn' : (blocked ? 'blocked' : 'ok');
@@ -227,11 +227,63 @@ function render(data) {
     // pour l'utilisateur, afficher "N/A" évite de lire un succès qui n'existe pas.
     const verbatimDisplay = it.claims.length === 0 ? 'N/A' : it.verbatim_check;
     html += `<div class="status-line">Contrôle verbatim : <b class="${statusClass}">${verbatimDisplay}</b> ·
-      risque : ${it.risk_tier} · statut : <b class="${statusClass}">${it.compliance_status}</b> · ${pub}</div>
+      risque : ${it.risk_tier} · statut : <b class="${statusClass}">${it.compliance_status}</b> · <span id="pub-${i}">${pubLabel(it.published, it.human_validation)}</span></div>
+      <div id="hvpanel-${i}">${hvPanel(it, i)}</div>
       <details><summary>Journal de conformité (§8, rejouable)</summary><pre>${JSON.stringify(it.compliance_json,null,2)}</pre></details>
     </div>`;
   });
   el.innerHTML = html;
+}
+
+function pubLabel(published, hv) {
+  if (published) return '<span class="ok">PUBLIABLE' + (hv === 'approved' ? ' (approuvé par un humain)' : '') + '</span>';
+  if (hv === 'rejected') return '<span class="blocked">REJETÉ PAR L\'HUMAIN — non publiable</span>';
+  return '<span class="blocked">NON PUBLIABLE (validation humaine requise)</span>';
+}
+
+// §4 étape 9 : le contrôle de l'information revient à l'humain. Tout résultat
+// à risque élevé reste bloqué tant qu'un validateur n'a pas explicitement
+// approuvé ou rejeté -- la décision est enregistrée côté serveur (registre
+// partagé) sous la clé (intent_id, passage_hash), pas juste dans la page.
+function hvPanel(it, i) {
+  if (it.human_validation === 'n/a') return '';
+  if (it.human_validation === 'approved') return `<div class="status-line ok">✅ Publication approuvée par un validateur humain.</div>`;
+  if (it.human_validation === 'rejected') return `<div class="status-line blocked">⛔ Publication rejetée par un validateur humain.</div>`;
+  return `<div style="margin-top:10px;padding:12px;background:#fff8e6;border:1px solid #d4a72c;border-radius:6px">
+    <b>🧑‍⚖️ Validation humaine requise (§4 étape 9)</b>
+    <div class="meta" style="margin:4px 0 8px">Risque élevé : ce résultat ne sera publiable qu'après une décision humaine explicite, enregistrée et traçable (§8). Relis le passage source ci-dessus avant de décider.</div>
+    <div class="row">
+      <div><label style="margin-top:0">Pseudonyme du validateur</label><input id="validator-${i}" placeholder="ex : dep-042" value=""></div>
+      <div><label style="margin-top:0">Commentaire (optionnel)</label><input id="comment-${i}" placeholder="motif de la décision"></div>
+    </div>
+    <button type="button" style="margin-right:8px" onclick="validateIntent(${i}, 'approved')">✅ Approuver la publication</button>
+    <button type="button" style="background:var(--rouge)" onclick="validateIntent(${i}, 'rejected')">⛔ Rejeter</button>
+    <div id="hverr-${i}" class="err" style="margin-top:6px"></div>
+  </div>`;
+}
+
+async function validateIntent(i, decision) {
+  const it = window._intents[i];
+  const errBox = document.getElementById(`hverr-${i}`);
+  errBox.textContent = '';
+  const validator = document.getElementById(`validator-${i}`).value.trim();
+  if (!validator) { errBox.textContent = 'Indique un pseudonyme de validateur — une décision anonyme n\'est pas traçable (§8).'; return; }
+  try {
+    const resp = await fetch('/validate', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        intent_id: it.validation_key.intent_id,
+        passage_hash: it.validation_key.passage_hash,
+        decision,
+        validator_ref: validator,
+        comment: document.getElementById(`comment-${i}`).value,
+      }) });
+    const d = await resp.json();
+    if (d.error) { errBox.textContent = `⚠️ ${d.error}`; return; }
+    it.human_validation = d.human_validation;
+    it.published = d.published;
+    document.getElementById(`pub-${i}`).innerHTML = pubLabel(it.published, it.human_validation);
+    document.getElementById(`hvpanel-${i}`).innerHTML = hvPanel(it, i);
+  } catch (e) { errBox.textContent = `⚠️ Erreur réseau : ${e}`; }
 }
 </script>
 </body>

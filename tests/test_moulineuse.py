@@ -252,6 +252,94 @@ def test_pastille_route_returns_non_opposable_by_default() -> None:
     assert passage.source_id == "DOC123"
 
 
+def test_pastille_route_ignores_opposable_override_from_query() -> None:
+    # §6ter/INV-010 : l'opposabilité dérive du type de document, jamais d'un
+    # flag de la requête -- un override piloté par la query rendrait INV-010
+    # contournable le jour où la formulation de requête est déléguée à un LLM.
+    client = FakeMcpClient({"get_pastilled_article": {"text": "Texte de l'amendement."}})
+    provider = MoulineuseRetrievalProvider(client=client)
+
+    passage = provider.retrieve(
+        Intent(id="1", question="?"),
+        _state(),
+        {
+            "route": "pastille",
+            "chambre": "assemblee",
+            "article": "1er",
+            "documentUid": "DOC123",
+            "opposable_override": "true",
+        },
+    )
+
+    assert passage.opposable is False
+
+
+def test_code_article_route_flags_ambiguous_selection_across_distinct_codes() -> None:
+    # Piège A3 (variante) : LIKE '%civil%' matche le Code civil ET le Code de
+    # procédure civile -- rows[0] est une sélection silencieuse, signalée pour
+    # que l'orchestration élève le risque.
+    client = FakeMcpClient(
+        {
+            "query_sql": [
+                {"id": "LEGIARTI-1", "num": "16", "etat": "VIGUEUR", "titre_texte": "Code civil", "contenu": "Texte A."},
+                {"id": "LEGIARTI-2", "num": "16", "etat": "VIGUEUR", "titre_texte": "Code de procédure civile", "contenu": "Texte B."},
+            ]
+        }
+    )
+    provider = MoulineuseRetrievalProvider(client=client)
+    passage = provider.retrieve(
+        Intent(id="1", question="Que dit l'article 16 du code civil ?"),
+        _state(),
+        {"route": "code_article", "article": "16", "code": "civil"},
+    )
+
+    assert passage.metadata["selection_ambiguous"] is True
+    assert passage.metadata["candidate_count"] == 2
+
+
+def test_code_article_route_does_not_flag_multiple_versions_of_same_code() -> None:
+    # Plusieurs versions du MÊME texte ne sont pas une ambiguïté de sélection :
+    # l'ORDER BY date_debut DESC choisit la version la plus récente applicable.
+    client = FakeMcpClient(
+        {
+            "query_sql": [
+                {"id": "LEGIARTI-NEW", "num": "1103", "etat": "VIGUEUR", "titre_texte": "Code civil", "contenu": "Version actuelle."},
+                {"id": "LEGIARTI-OLD", "num": "1103", "etat": "MODIFIE", "titre_texte": "Code civil", "contenu": "Version antérieure."},
+            ]
+        }
+    )
+    provider = MoulineuseRetrievalProvider(client=client)
+    passage = provider.retrieve(
+        Intent(id="1", question="Que dit l'article 1103 du code civil ?"),
+        _state(),
+        {"route": "code_article", "article": "1103", "code": "code civil"},
+    )
+
+    assert passage.metadata["selection_ambiguous"] is False
+    assert passage.text == "Version actuelle."
+
+
+def test_texte_libre_route_flags_ambiguous_selection_when_multiple_hits() -> None:
+    client = FakeMcpClient(
+        {
+            "search_legal_texts": {
+                "hits": [
+                    {"document": {"uid": "T1", "autocompletion": "Premier titre."}},
+                    {"document": {"uid": "T2", "autocompletion": "Second titre."}},
+                ]
+            }
+        }
+    )
+    provider = MoulineuseRetrievalProvider(client=client)
+    passage = provider.retrieve(
+        Intent(id="1", question="?"),
+        _state(),
+        {"route": "texte_libre", "query": "recherche large"},
+    )
+
+    assert passage.metadata["selection_ambiguous"] is True
+
+
 def test_unknown_route_is_refused() -> None:
     provider = MoulineuseRetrievalProvider(client=FakeMcpClient({}))
 

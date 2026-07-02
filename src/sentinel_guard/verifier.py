@@ -20,6 +20,20 @@ _RESTRICTION_CONNECTORS = (
     "par dérogation",
 )
 _LEADING_PUNCTUATION_PATTERN = re.compile(r"^[\s,;:.)\]]+")
+# §7 : la casse et la ponctuation de bord d'une citation ne changent pas sa
+# fidélité ("Les contrats..." cité "les contrats...", point final ajouté).
+# Les traiter comme des différences produisait des NON_AUTHENTIFIÉ sur des
+# citations légitimes -- du sur-refus, que §12 traite comme une propriété
+# de sécurité à mesurer, pas comme un comportement anodin.
+_EDGE_PUNCTUATION_PATTERN = re.compile(r"""^[\s"',;:.()\[\]-]+|[\s"',;:.()\[\]-]+$""")
+
+
+def _comparable(text: str) -> str:
+    return normalize_text(text).casefold()
+
+
+def _comparable_candidate(text: str) -> str:
+    return _EDGE_PUNCTUATION_PATTERN.sub("", _comparable(text))
 
 
 def _starts_with_connector(remainder_lower: str, connector: str) -> bool:
@@ -33,9 +47,10 @@ def _starts_with_connector(remainder_lower: str, connector: str) -> bool:
 
 
 def _is_contiguous_subsegment(candidate: str, source: str) -> bool:
-    normalized_candidate = normalize_text(candidate)
-    normalized_source = normalize_text(source)
-    return normalized_candidate in normalized_source
+    normalized_candidate = _comparable_candidate(candidate)
+    if not normalized_candidate:
+        return False
+    return normalized_candidate in _comparable(source)
 
 
 def _detect_ellipsis(text: str) -> bool:
@@ -43,8 +58,11 @@ def _detect_ellipsis(text: str) -> bool:
 
 
 def _detect_adjacent_truncation(candidate: str, source: str) -> bool:
-    normalized_candidate = normalize_text(candidate)
-    normalized_source = normalize_text(source)
+    # Mêmes règles de comparaison que le contrôle verbatim (§7) : si la
+    # citation n'a été trouvée qu'à casse/ponctuation de bord près, la
+    # détection de troncature doit la retrouver au même endroit.
+    normalized_candidate = _comparable_candidate(candidate)
+    normalized_source = _comparable(source)
 
     if not normalized_candidate:
         return False
@@ -87,18 +105,67 @@ _ANCHOR_STOPWORDS = frozenset(
 )
 
 
+# Ancres dures (§7) : le seuil de 60% ne s'applique qu'au vocabulaire
+# ordinaire. Les marqueurs de négation et les valeurs chiffrées de la
+# reformulation doivent TOUS exister dans la source, sinon une distorsion
+# de sens (B3) passe l'ancrage : "ne" et "pas" étant des stopwords, « le
+# contrat n'est pas valide » s'ancrait exactement comme « le contrat est
+# valide » ; et « 14 jours » substitué à « 10 jours » se noyait dans une
+# phrase par ailleurs fidèle. Limite documentée : la direction inverse (le
+# passage nie, la reformulation affirme) reste indétectable lexicalement --
+# elle est couverte par le plancher de risque (§2), qui délègue toute
+# INTERPRÉTATION à la validation humaine avant publication.
+_NEGATION_TOKENS = frozenset({"ne", "n", "pas", "non", "jamais", "aucun", "aucune", "nul", "nulle", "ni"})
+
+
+def _raw_tokens(text: str) -> set[str]:
+    return set(_TOKEN_PATTERN.findall(normalize_text(text).lower()))
+
+
+def _negation_markers(tokens: set[str]) -> set[str]:
+    # "n'" élidé et "ne" plein sont le même marqueur.
+    return {"ne" if t == "n" else t for t in tokens if t in _NEGATION_TOKENS}
+
+
+def _hard_anchors_hold(candidate_tokens: set[str], source_tokens: set[str]) -> bool:
+    numeric_tokens = {t for t in candidate_tokens if any(ch.isdigit() for ch in t)}
+    if not numeric_tokens <= source_tokens:
+        return False
+    return _negation_markers(candidate_tokens) <= _negation_markers(source_tokens)
+
+
 def _anchor_tokens(text: str) -> set[str]:
     tokens = _TOKEN_PATTERN.findall(normalize_text(text).lower())
     return {t for t in tokens if t not in _ANCHOR_STOPWORDS and (t.isdigit() or len(t) > 1)}
 
 
 def _interpretation_is_anchored(candidate: str, source: str) -> bool:
+    if not _hard_anchors_hold(_raw_tokens(candidate), _raw_tokens(source)):
+        return False
     candidate_tokens = _anchor_tokens(candidate)
     if not candidate_tokens:
         return False
     source_tokens = _anchor_tokens(source)
     overlap = len(candidate_tokens & source_tokens) / len(candidate_tokens)
     return overlap >= _INTERPRETATION_ANCHOR_THRESHOLD
+
+
+# §7, piège C2 : défense en profondeur sur le cycle de vie. L'opposabilité
+# est dérivée par les routes de récupération, mais le vérificateur ne leur
+# fait pas aveuglément confiance : un Passage marqué opposable dont les
+# métadonnées portent un état autre que VIGUEUR (ABROGE, MODIFIE, PERIME,
+# ...) est traité comme non opposable -- au pire un sur-classement en
+# CITÉ_NON_OPPOSABLE, jamais un AUTHENTIFIÉ sur un texte abrogé.
+_ETAT_VIGUEUR = "VIGUEUR"
+
+
+def _effectively_opposable(passage: Passage) -> bool:
+    if not passage.opposable:
+        return False
+    etat = passage.metadata.get("etat")
+    if etat is None:
+        return True
+    return str(etat).strip().upper() == _ETAT_VIGUEUR
 
 
 def _verify_text_claim(claim: Claim, passage: Passage) -> ClaimStatus:
@@ -121,7 +188,7 @@ def _verify_text_claim(claim: Claim, passage: Passage) -> ClaimStatus:
     if _detect_ellipsis(claim.ref):
         return ClaimStatus.INTERPRÉTATION  # anti-épissage (§7)
 
-    if not passage.opposable:
+    if not _effectively_opposable(passage):
         return ClaimStatus.CITÉ_NON_OPPOSABLE
 
     return ClaimStatus.AUTHENTIFIÉ

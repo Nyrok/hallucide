@@ -6,7 +6,7 @@ from .coverage import DEFAULT_COVERAGE_THRESHOLD, build_echo_back, check_coverag
 from .exceptions import RetrievalError, VerificationError
 from .retrieval import RetrievalProvider, advance_retrieval
 from .triage import RiskTier, apply_risk_floor
-from .types import Claim, Intent, IntentExecutionResult, OrchestrationResult, Passage, RetrievalState
+from .types import Claim, ClaimStatus, Intent, IntentExecutionResult, OrchestrationResult, Passage, RetrievalState
 from .verifier import verify_claims
 
 
@@ -49,7 +49,16 @@ class Orchestrator:
         coverage = check_coverage(message, list(intents), threshold=coverage_threshold)
         echo_back = build_echo_back(list(intents)) if len(intents) > 1 else None
 
-        base_floor_conditions = list(floor_conditions) + [not coverage.passed]
+        # §4 étape 3 (formulation d'une requête PAR intention) n'est pas
+        # implémentée : l'appelant fournit UNE query, réutilisée pour toutes
+        # les intentions. Dès que N>1, le même passage sert plusieurs
+        # questions -- c'est structurellement le piège E1 (N questions ->
+        # 1 requête) que la décomposition ferme en amont. Tant que l'étape 3
+        # manque, ce mode dégradé est borné plutôt qu'interdit : plancher de
+        # risque élevé, donc validation humaine avant publication (§4 étape 9).
+        shared_query_between_intents = len(intents) > 1
+
+        base_floor_conditions = list(floor_conditions) + [not coverage.passed, shared_query_between_intents]
         results: list[IntentExecutionResult] = []
 
         for intent in intents:
@@ -90,9 +99,26 @@ class Orchestrator:
             # par identité exacte) fait partie de la liste explicite du
             # plancher de risque -- piège C1, "pertinence non garantie".
             pertinence_non_garantie = bool(passage.metadata.get("pertinence_non_garantie", False))
+            # §2/INV-011 : un claim reformulé (INTERPRÉTATION) ou non
+            # opposable (CITÉ_NON_OPPOSABLE) n'est jamais publiable en risque
+            # faible -- ces statuts sont "bornés puis délégués à l'humain"
+            # (§10, B3/D1/F1), et c'est le plancher qui déclenche la
+            # délégation (§4 étape 9). Sans cette condition, une paraphrase
+            # partait en publication directe sans validation humaine.
+            weak_status_present = any(
+                c.status in (ClaimStatus.INTERPRÉTATION, ClaimStatus.CITÉ_NON_OPPOSABLE)
+                for c in verification.claims
+            )
+            # Piège A3 (variante) : plusieurs candidats distincts matchaient
+            # la requête et le provider en a choisi un silencieusement
+            # (metadata posée par la route, ex. LIKE '%civil%' -> Code civil
+            # ET Code de procédure civile) -- la sélection peut être le
+            # mauvais document, verbatim exact compris.
+            selection_ambiguous = bool(passage.metadata.get("selection_ambiguous", False))
             risk_tier = apply_risk_floor(
                 llm_risk,
-                base_floor_conditions + [slot_inferred, truncation_flagged, pertinence_non_garantie],
+                base_floor_conditions
+                + [slot_inferred, truncation_flagged, pertinence_non_garantie, weak_status_present, selection_ambiguous],
             )
 
             results.append(IntentExecutionResult(intent=intent, passage=passage, verification=verification, risk_tier=risk_tier))

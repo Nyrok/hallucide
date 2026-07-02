@@ -178,15 +178,17 @@ class MoulineuseRetrievalProvider:
         result = self.client.call_tool("get_pastilled_article", arguments)
         text, metadata = _extract_pastille_text(result)
 
-        # Parliamentary articles (amendments, projets non promulgués, etc.)
-        # are normative but not opposable per §6ter unless explicitly flagged.
-        opposable = bool(query.get("opposable_override")) and query["opposable_override"] == "true"
-
         source_id = document_uid or source_url or f"{chambre}:{article}"
         return Passage(
             source_id=source_id,
             source_type="normatif",
-            opposable=opposable,
+            # §6ter/INV-010 : l'opposabilité dérive du type de document,
+            # jamais d'un flag de la requête. Un article parlementaire
+            # pastillé (amendement, texte non promulgué) n'est jamais
+            # opposable, quel que soit l'appelant -- un override piloté par
+            # la query rendrait INV-010 contournable par la formulation de
+            # requête (§4 étape 3) le jour où elle est déléguée à un LLM.
+            opposable=False,
             text=text,
             metadata=metadata,
         )
@@ -213,6 +215,15 @@ class MoulineuseRetrievalProvider:
             )
 
         row = rows[0]
+        # Piège A3 (variante) : le LIKE sur le titre peut matcher plusieurs
+        # textes distincts (ex. '%civil%' -> Code civil ET Code de procédure
+        # civile) ; prendre rows[0] serait alors une sélection silencieuse du
+        # mauvais code, verbatim exact compris. Signalé pour que
+        # l'orchestrateur élève le risque (§2). Plusieurs versions du MÊME
+        # texte ne sont pas ambiguës : l'ORDER BY date_debut choisit la plus
+        # récente applicable.
+        distinct_titres = {r.get("titre_texte") for r in rows}
+        selection_ambiguous = len(distinct_titres) > 1
         etat = row.get("etat")
         opposable = etat in _OPPOSABLE_ETATS
         contenu = row.get("contenu")
@@ -238,6 +249,7 @@ class MoulineuseRetrievalProvider:
                 "etat": etat,
                 "titre_texte": row.get("titre_texte"),
                 "candidate_count": len(rows),
+                "selection_ambiguous": selection_ambiguous,
                 "slot_inferred": slot_inferred,
                 "article_slot_copied": article_provenance.copied,
                 "code_slot_copied": code_provenance.copied,
@@ -280,6 +292,9 @@ class MoulineuseRetrievalProvider:
                 "page_path": document.get("page_path"),
                 "badge": document.get("badge"),
                 "candidate_count": len(hits),
+                # hits[0] parmi plusieurs résultats = sélection silencieuse,
+                # même signal que la route code_article (piège A3 variante).
+                "selection_ambiguous": len(hits) > 1,
             },
         )
 

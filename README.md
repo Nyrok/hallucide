@@ -2,7 +2,7 @@
 
 Orchestrateur de gouvernance pour la fidélité documentaire (spec v3) : un pipeline déterministe qui décompose une question, récupère des passages depuis des sources officielles réelles, et vérifie chaque citation mot pour mot avant publication — sans jamais faire confiance au LLM pour juger de sa propre fidélité.
 
-141 tests, exemples exécutables + démonstrateur web. Statut détaillé section par section : voir `STATUS.md`.
+157 tests, exemples exécutables + démonstrateur web. Statut détaillé section par section : voir `STATUS.md`.
 
 ## Prérequis
 
@@ -56,6 +56,7 @@ Puis ouvrir **http://localhost:8765** dans un navigateur.
 
 - Saisir une question, ou cliquer « 🔎 Détecter la source automatiquement » pour laisser le système proposer la route (article de code / question parlementaire / donnée chiffrée / recherche libre) et résoudre l'UID si besoin.
 - Chaque intention affiche un statut coloré (`AUTHENTIFIÉ` / `CITÉ_NON_OPPOSABLE` / `NON_AUTHENTIFIÉ` / `INTERPRÉTATION` / `DONNÉE_TRACÉE` / `NO_ANSWER`) et le journal de conformité rejouable (§8).
+- **Validation humaine (§4 étape 9)** : tout résultat à risque élevé affiche un panneau « Approuver / Rejeter » (pseudonyme de validateur obligatoire). La décision est enregistrée côté serveur sous la clé (intent_id, passage_hash) et reste valable si la même question est reposée. Rien à risque élevé n'est publiable sans décision humaine explicite.
 - Arrêt : `Ctrl+C` dans le terminal où le serveur tourne.
 
 Si le port 8765 est déjà occupé (serveur précédent non arrêté), le retrouver et l'arrêter avant de relancer :
@@ -88,8 +89,10 @@ Toutes vérifiées en conditions réelles, pas seulement en mocks (voir `example
 
 ## Garanties (ce que le code prouve, pas le modèle)
 
-- Une citation publiée `AUTHENTIFIÉ` existe mot pour mot dans la source officielle **opposable** récupérée (§7).
-- Le plancher de risque ne peut jamais descendre sous `élevé` une fois qu'une condition déterministe (référence inférée, troncature, pertinence non garantie, couverture insuffisante) est détectée (§2/INV-011).
+- Une citation publiée `AUTHENTIFIÉ` existe mot pour mot dans la source officielle **opposable** récupérée (§7) — et le vérificateur re-contrôle lui-même le cycle de vie (`etat` ≠ VIGUEUR → jamais `AUTHENTIFIÉ`, défense en profondeur C2).
+- Le plancher de risque ne peut jamais descendre sous `élevé` une fois qu'une condition déterministe est détectée (§2/INV-011) : référence inférée, troncature, pertinence non garantie, couverture insuffisante, claim `INTERPRÉTATION` ou `CITÉ_NON_OPPOSABLE`, sélection ambiguë entre plusieurs candidats, ou query unique partagée entre plusieurs intentions (E1 dégradé).
+- Une `INTERPRÉTATION` doit ancrer **tous** ses marqueurs de négation et **toutes** ses valeurs chiffrées dans la source (ancres dures anti-distorsion B3), en plus du recouvrement lexical ≥60%.
+- L'opposabilité dérive du type de document et de son cycle de vie, jamais d'un flag de requête ni du modèle (INV-010).
 - Une intention à risque élevé n'est jamais publiée sans décision humaine explicite, capturée et journalisée (§4 étape 9).
 - Le journal de conformité ne contient jamais la question posée ni une identité (§13.4) — garde-fou vérifié par assertion, pas par convention.
 
@@ -98,6 +101,19 @@ Toutes vérifiées en conditions réelles, pas seulement en mocks (voir `example
 ```bash
 python -m pytest
 ```
+
+**157 tests automatisés**, dont 16 tests de non-régression couvrant la seconde relecture (voir `STATUS.md`, « Relecture 2 ») : plancher de risque sur les statuts faibles (`INTERPRÉTATION`/`CITÉ_NON_OPPOSABLE`), ancres dures négation/chiffres, suppression de `opposable_override`, mode dégradé E1 (query partagée), re-contrôle d'abrogation dans le vérificateur, sélection ambiguë, insensibilité casse/ponctuation de bord, virgule décimale.
+
+### Tests en conditions réelles (démonstrateur, 2026-07-02)
+
+Deux scénarios joués en direct contre les sources réelles (Moulineuse + Mistral), validant la chaîne complète jusqu'à la décision humaine :
+
+| Scénario | Ce qui s'est passé | Verdict |
+|---|---|---|
+| **Prémisse fausse (A2)** — « Teneur de la QOSD n° 0812 sur la fermeture d'une trésorerie, quelle commune ? » (la vraie QOSD 812 porte sur les contrats aidés) | Le système a récupéré le vrai texte officiel, n'a **pas** inventé la commune demandée (`NO_ANSWER`, zéro hallucination), source non opposable + 3 intentions sur 1 requête → risque élevé, panneau de validation humaine sur chaque intention | ✅ conforme — décision attendue : rejet |
+| **N questions → 1 requête (E1)** — « Que dit l'article 1103 du code civil et quelle est la règle de bonne foi ? » | 2 intentions détectées (couverture 100%), la requête unique (art. 1103) a servi les deux : intention 1 correcte (verbatim `AUTHENTIFIÉ`, opposable), intention 2 hors sujet (la bonne foi est à l'art. 1104) mais **bloquée** par le plancher E1 + slot inféré (A3) → validation humaine | ✅ conforme — décisions attendues : approbation (1), rejet (2) |
+
+Le second scénario matérialise le cas que les corrections visaient : un passage authentique, exact et opposable, présenté en réponse à une question à laquelle il ne répond pas — chaque élément est vrai isolément, et c'était publiable automatiquement avant le plancher E1. Le contrôle revient désormais à l'humain.
 
 ## Exemples
 

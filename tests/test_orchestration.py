@@ -305,6 +305,116 @@ def test_refused_intent_is_logged_not_crashed_and_others_continue() -> None:
     assert result.results[1].verification.verbatim_check == "PASS"
 
 
+def test_orchestrator_elevates_risk_when_claim_is_interpretation() -> None:
+    # §2/INV-011 : une INTERPRÉTATION est "bornée puis déléguée à l'humain"
+    # (§10, B3/D1) -- le plancher doit la faire passer en risque élevé, jamais
+    # en publication directe à risque faible.
+    class InterpretationGenerator:
+        def generate_claims(self, intent: Intent, passage: Passage):
+            return [Claim(ref="Une reformulation fidèle du passage authentique.", status=ClaimStatus.INTERPRÉTATION)]
+
+    class SourceProvider:
+        def retrieve(self, intent: Intent, state: RetrievalState, query: dict[str, str]):
+            return Passage(
+                source_id="doc1", source_type="normatif", opposable=True,
+                text="Une reformulation très fidèle du même passage authentique original.",
+                metadata={},
+            )
+
+    orchestrator = Orchestrator(model_provider=object(), decomposer=DummyDecomposer(), intent_generator=InterpretationGenerator())
+    result = orchestrator.run(
+        message="Quelle est la règle ?",
+        retrieval_provider=SourceProvider(),
+        retrieval_state=RetrievalState(),
+        floor_conditions=[False],
+        llm_risk=RiskTier.FAIBLE,
+        query={},
+        max_hops=1,
+    )
+
+    assert result.results[0].verification.claims[0].status == ClaimStatus.INTERPRÉTATION
+    assert result.results[0].risk_tier == RiskTier.ÉLEVÉ
+
+
+def test_orchestrator_elevates_risk_when_claim_is_cite_non_opposable() -> None:
+    # §2/INV-011 : un verbatim exact sur source non opposable (F1) reste
+    # exact mais pas opposable -- délégué à l'humain via le plancher.
+    class NonOpposableProvider:
+        def retrieve(self, intent: Intent, state: RetrievalState, query: dict[str, str]):
+            return Passage(
+                source_id="debat-1", source_type="normatif", opposable=False,
+                text="Passage authentique.", metadata={},
+            )
+
+    orchestrator = Orchestrator(model_provider=object(), decomposer=DummyDecomposer(), intent_generator=DummyIntentGenerator())
+    result = orchestrator.run(
+        message="Quelle est la règle ?",
+        retrieval_provider=NonOpposableProvider(),
+        retrieval_state=RetrievalState(),
+        floor_conditions=[False],
+        llm_risk=RiskTier.FAIBLE,
+        query={},
+        max_hops=1,
+    )
+
+    assert result.results[0].verification.claims[0].status == ClaimStatus.CITÉ_NON_OPPOSABLE
+    assert result.results[0].risk_tier == RiskTier.ÉLEVÉ
+
+
+def test_orchestrator_elevates_risk_when_single_query_serves_multiple_intents() -> None:
+    # §4 : "1 intention -> 1 requête". L'étape 3 (formulation de requête par
+    # intention) n'étant pas implémentée, une query unique partagée entre N>1
+    # intentions recrée le piège E1 -- mode dégradé borné : risque élevé pour
+    # toutes les intentions, donc validation humaine avant publication.
+    class TwoIntentDecomposer:
+        def decompose(self, message: str):
+            return [Intent(id="1", question="Quelle règle ?"), Intent(id="2", question="Quelle sanction ?")]
+
+    class SharedQueryProvider:
+        def retrieve(self, intent: Intent, state: RetrievalState, query: dict[str, str]):
+            return Passage(source_id="doc-partagé", source_type="normatif", opposable=True, text="Passage authentique.", metadata={})
+
+    orchestrator = Orchestrator(model_provider=object(), decomposer=TwoIntentDecomposer(), intent_generator=DummyIntentGenerator())
+    result = orchestrator.run(
+        message="Quelle règle ? Quelle sanction ?",
+        retrieval_provider=SharedQueryProvider(),
+        retrieval_state=RetrievalState(),
+        floor_conditions=[False],
+        llm_risk=RiskTier.FAIBLE,
+        query={},
+        max_hops=1,
+    )
+
+    assert len(result.results) == 2
+    assert all(r.risk_tier == RiskTier.ÉLEVÉ for r in result.results)
+
+
+def test_orchestrator_elevates_risk_when_selection_ambiguous() -> None:
+    # Piège A3 (variante) : plusieurs candidats matchaient la requête et le
+    # provider en a choisi un silencieusement -- le signal metadata doit être
+    # lu par l'orchestration et élever le risque.
+    class AmbiguousProvider:
+        def retrieve(self, intent: Intent, state: RetrievalState, query: dict[str, str]):
+            return Passage(
+                source_id="doc1", source_type="normatif", opposable=True,
+                text="Passage authentique.",
+                metadata={"selection_ambiguous": True, "candidate_count": 2},
+            )
+
+    orchestrator = Orchestrator(model_provider=object(), decomposer=DummyDecomposer(), intent_generator=DummyIntentGenerator())
+    result = orchestrator.run(
+        message="Quelle est la règle ?",
+        retrieval_provider=AmbiguousProvider(),
+        retrieval_state=RetrievalState(),
+        floor_conditions=[False],
+        llm_risk=RiskTier.FAIBLE,
+        query={},
+        max_hops=1,
+    )
+
+    assert result.results[0].risk_tier == RiskTier.ÉLEVÉ
+
+
 def test_orchestrator_raises_when_no_intents() -> None:
     class EmptyDecomposer:
         def decompose(self, message: str):

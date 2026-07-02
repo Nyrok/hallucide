@@ -1,6 +1,6 @@
 # Statut d'implémentation — Sentinel-Guard v3
 
-Dernière mise à jour : voir date du commit. 140 tests passent (`python -m pytest`).
+Dernière mise à jour : voir date du commit. 157 tests passent (`python -m pytest`).
 
 Estimation globale : **~87%** de la spec v3 implémentée. Le cœur de la garantie (§2, §4, §6, §7, §14, §15) est complet et vérifié en conditions réelles. L'infrastructure de mesure (§12), y compris la calibration inter-annotateur, est codée et testée ; il ne manque que de vraies annotations humaines pour l'exercer en conditions réelles. Le seul point structurellement hors de portée du code seul reste D1-D3/C3/E3, que la spec elle-même classe limite mathématique du contrôle déterministe (§10).
 
@@ -9,7 +9,7 @@ Estimation globale : **~87%** de la spec v3 implémentée. Le cœur de la garant
 | Section | % | Module(s) | État |
 |---|---|---|---|
 | §1bis Glossaire | 100% | `types.py` | Les 5 `ClaimStatus` respectent strictement les 3 niveaux fidélité/pertinence/interprétation |
-| §2 Plancher de risque | ~95% | `triage.py`, `orchestration.py` | `max(LLM, plancher)` automatique : couverture (E4), slot inféré (A3), troncature (B2), pertinence non garantie (C1) — aucun n'est contournable par l'appelant |
+| §2 Plancher de risque | ~98% | `triage.py`, `orchestration.py` | `max(LLM, plancher)` automatique : couverture (E4), slot inféré (A3), troncature (B2), pertinence non garantie (C1), statut `INTERPRÉTATION`/`CITÉ_NON_OPPOSABLE` (B3/D1/F1), sélection ambiguë (A3 variante), query partagée entre N intentions (E1 dégradé) — aucun n'est contournable par l'appelant |
 | §3 Abstraction moteur | ~95% | `llm.py`, `gemini.py`, `mistral.py`, `litellm_provider.py` | Gemini + Mistral réels (wrappers HTTP maison), plus `LiteLLMModelProvider` (§17.1) — trois implémentations concrètes de `ModelProvider`, toutes vérifiées en direct |
 | **§4 Flux complet** | **100%** | `orchestration.py`, `core.py`, `coverage.py`, `multi_hop.py`, `human_validation.py` | Toutes les étapes 0-10 implémentées et testées, multi-saut réel inclus |
 | §4bis Structuré/texte libre | ~90% | `moulineuse.py`, `datagouv.py`, `slot_provenance.py` | Routes structurées + repli texte libre marqué "pertinence non garantie" |
@@ -18,7 +18,7 @@ Estimation globale : **~87%** de la spec v3 implémentée. Le cœur de la garant
 | §6 Forçage récupération | ✅ 100% | `orchestration.py`, `llm.py` | Satisfait par choix architectural : l'orchestrateur appelle toujours MCP directement (§4 étape 4), jamais le LLM — c'est la voie "backend local sans forçage" explicitement autorisée par §6 comme équivalente au forçage natif, appliquée à tous les backends. `PromptBasedDecomposer`/`PromptBasedIntentGenerator` n'ont donc aucun outil à forcer, code nettoyé en conséquence |
 | §6bis Moulineuse | ~85% | `moulineuse.py` | 3 routes prouvées en direct (code_article, pastille refus, texte_libre) ; pastille jamais testée en direct sur un chemin heureux |
 | §6ter Opposabilité/data.gouv | ~92% | `datagouv.py`, `moulineuse.py`, `file_retrieval.py` | Sources réelles branchées et prouvées en direct : normatif (Moulineuse), donnée tabulaire (data.gouv API), donnée non-tabulaire (fichiers CSV/ZIP téléchargés — couvre l'INSEE dont la plupart des ressources ne sont PAS dans l'API tabulaire) |
-| §7 Vérificateur déterministe | ~95% | `verifier.py`, `normalization.py` | Contiguïté, anti-épissage, opposabilité, anti-troncature (1 bug d'occurrence multiple corrigé) |
+| §7 Vérificateur déterministe | ~95% | `verifier.py`, `normalization.py` | Contiguïté (insensible casse/ponctuation de bord), anti-épissage, opposabilité avec re-contrôle du cycle de vie (`etat`), anti-troncature, ancres dures négation/chiffres sur les INTERPRÉTATION |
 | §7bis Refus | 90% | `exceptions.py`, `verifier.py` | Levée systématique, jamais de devinette |
 | §8 Registre | ~90% | `audit.py` | `passage_hashes` rejouables, intégré dans la façade unifiée |
 | §9 API vs local | N/A | — | Narratif, satisfait par construction (agnostique au provider) |
@@ -39,15 +39,15 @@ Estimation globale : **~87%** de la spec v3 implémentée. Le cœur de la garant
 | A3 — référence inférée | ✅ borné | `slot_provenance.py`, élévation auto du risque |
 | B1 — citation exacte | ✅ verrouillé | contiguïté, `verifier.py` |
 | B2 — citation tronquée | ✅ borné | `_detect_adjacent_truncation`, élévation auto |
-| B3 — paraphrase distordue | ✅ borné | ellipsis → `INTERPRÉTATION` |
+| B3 — paraphrase distordue | ✅ borné | ellipsis → `INTERPRÉTATION` ; ancres dures négation/chiffres ; toute `INTERPRÉTATION` → risque élevé → humain |
 | B4 — épissage de fragments | ✅ verrouillé | règle de contiguïté stricte |
 | C1 — source hors-sujet | ✅ borné | route texte_libre, `pertinence_non_garantie` |
-| C2 — source périmée | ✅ borné | `ETAT`/`opposable`, testé avec cas synthétiques |
+| C2 — source périmée | ✅ borné | `ETAT`/`opposable` à la récupération + re-contrôle de `metadata["etat"]` dans le vérificateur (défense en profondeur) |
 | C3 — mauvaise juridiction | ❌ non traité | nécessite corpus multi-juridictionnel réel |
 | D1 — interprétation déguisée | ❌ hors de portée | jugement humain par construction (spec §10) |
 | D2 — synthèse fallacieuse | ❌ hors de portée | idem, limite mathématique explicite |
 | D3 — fausse attribution | ❌ hors de portée | idem |
-| E1 — N questions → 1 requête | ✅ verrouillé | décomposition, `orchestration.py` |
+| E1 — N questions → 1 requête | ✅ borné | décomposition ; mais §4 étape 3 (1 requête PAR intention) non implémentée → query partagée entre N>1 intentions force le risque élevé |
 | E2 — multi-saut non suivi | ✅ verrouillé | bornes §4ter, `retrieval.py` |
 | E3 — référent manquant | ❌ non traité | nécessite un tour de dialogue, pas une fonction pure |
 | E4 — intention oubliée | ✅ borné | `coverage.py`, élévation auto du risque |
@@ -127,6 +127,31 @@ Gemini, Mistral et LiteLLM ont tous été confirmés fonctionnels de bout en bou
 - **Vestige `tool_choice` incohérent (§6)** : `PromptBasedDecomposer`/`PromptBasedIntentGenerator` calculaient `tool_choice="required" if supports_forced_tool_calling else None` tout en passant systématiquement `tools=[]` — forcer un outil qui n'est jamais déclaré n'a aucun effet. Nettoyé : ces classes n'appellent jamais MCP elles-mêmes (l'orchestrateur le fait toujours en amont), donc `tool_choice=None` sans condition, avec le choix architectural documenté en commentaire.
 - **LiteLLM bloqué par l'environnement puis débloqué (§17)** : `litellm.completion()` échouait en `SSL: CERTIFICATE_VERIFY_FAILED` via `httpx`/`certifi`, alors que les wrappers `urllib` de `gemini.py`/`mistral.py` fonctionnaient. Cause confirmée : Avast Antivirus fait de l'inspection HTTPS et installe son certificat racine (`CN=Avast Web/Mail Shield Root`) dans le magasin Windows natif (`Cert:\LocalMachine\Root`, utilisé par `urllib`), jamais dans le bundle Mozilla embarqué de `certifi` (utilisé par `httpx`). `SSL_CERT_FILE` ne suffisait pas. Débloqué avec le paquet `truststore`, qui patche `ssl` pour utiliser l'API native de l'OS (`SChannel` sous Windows) au lieu du bundle certifi — portable sur toute machine avec inspection HTTPS (antivirus ou proxy d'entreprise), sans export manuel de certificat. `LiteLLMModelProvider` l'injecte automatiquement à l'initialisation. Vérifié en direct sur Mistral via LiteLLM.
 
+## Tests en direct du démonstrateur (2026-07-02) — boucle humaine validée
+
+Deux scénarios joués en conditions réelles (Moulineuse + Mistral) après la Relecture 2, validant que le contrôle de l'information revient effectivement à l'humain :
+
+1. **QOSD n° 812 avec prémisse fausse (A2)** — la question affirmait que la QOSD 812 portait sur la fermeture d'une trésorerie ; le vrai texte porte sur les contrats aidés (Mme Obono). Résultat : texte officiel récupéré tel quel, aucune commune inventée (`NO_ANSWER`), risque élevé (source non opposable + 3 intentions sur 1 requête + couverture 79%), panneau de validation humaine affiché sur chaque intention. Aucune hallucination.
+2. **Article 1103 + bonne foi (E1)** — 2 intentions, couverture 100%, requête unique servant les deux. Intention 1 : verbatim exact `AUTHENTIFIÉ` sur source opposable en vigueur. Intention 2 : passage authentique mais hors sujet (la bonne foi est à l'art. 1104) — **bloqué** par le double plancher query-partagée (E1) + slot inféré (A3), délégué à l'humain. C'est précisément le cas visé par la Relecture 2 : « bonne réponse à côté de la question », publiable automatiquement avant, décision humaine désormais.
+
+Corrections UI issues de ces tests (ui/server.py) :
+- **Claim de contrôle tronqué sur abréviation** : l'extraction de première phrase coupait sur « M. le ministre » → « Mme Danièle Obono interroge M ». Corrigé : les points d'abréviation (M., Mme, art., n°, …) ne terminent plus une phrase.
+- **Détection du nom de code trop gourmande** : « code civil et quelle est la règle… » capturait toute la fin de la phrase comme titre de code → `RetrievalError`. Corrigé : coupure au premier marqueur de nouvelle proposition, sans casser les titres réels contenant « et » (« code de la construction et de l'habitation »).
+- **Préposition avalée** : « code de la construction… » était prérempli « code la construction… », cassant le LIKE sur le titre officiel. Corrigé.
+- **Articles à préfixe tronqués** : « article L. 1232-6 » était détecté « L. ». Corrigé (préfixe L/R/D + point + espace optionnels).
+
+## Relecture 2 — 7 angles morts trouvés, 6 corrigés + 1 borné
+
+Seconde relecture systématique (spec entière + tous les modules), corrections avec tests de non-régression (16 nouveaux tests, suite à 157) :
+
+1. **Plancher §2 incomplet (INV-011) — orchestration.py** : le plancher ne recevait que 4 conditions ; le statut des claims n'y figurait pas. Une paraphrase `INTERPRÉTATION` (ou un verbatim `CITÉ_NON_OPPOSABLE`) pouvait être publiée en risque `faible` sans validation humaine, alors que la matrice §10 classe B3/D1/F1 « borné puis délégué à l'humain ». Corrigé : tout claim `INTERPRÉTATION` ou `CITÉ_NON_OPPOSABLE` déclenche le plancher → risque élevé → validation humaine (§4 étape 9).
+2. **Ancrage lexical aveugle à la négation et aux chiffres (verifier.py)** : `ne`/`pas` étant des stopwords, « le contrat n'est pas valide » s'ancrait comme « le contrat est valide » ; un chiffre substitué (« 14 jours » pour « 10 jours ») se noyait dans le seuil de 60%. Corrigé par des **ancres dures** : tous les marqueurs de négation et tous les tokens chiffrés de la reformulation doivent exister dans la source (« n' » élidé ≡ « ne »). Limite documentée : la direction inverse (le passage nie, la reformulation affirme) reste indétectable lexicalement — couverte par le point 1 (toute INTERPRÉTATION passe désormais par un humain).
+3. **`opposable_override` piloté par la requête (moulineuse.py)** : la route pastille laissait la query rendre un amendement opposable — INV-010 contournable par un flag le jour où la formulation de requête (§4 étape 3) est déléguée à un LLM. Corrigé : override supprimé, un article pastillé n'est jamais opposable (l'opposabilité dérive du type de document, point final).
+4. **« 1 intention → 1 requête » structurellement creux (orchestration.py)** : `ask(message, query)` réutilise UNE query pour toutes les intentions issues de la décomposition — N questions → 1 requête, le piège E1 recréé en interne. Borné (pas résolu) : tant que l'étape 3 (formulation de requête par intention) n'est pas implémentée, N>1 intentions avec query partagée force le risque élevé pour toutes → validation humaine. La vraie correction reste l'implémentation de l'étape 3.
+5. **Détection d'abrogation sans défense en profondeur (verifier.py)** : seul `code_article` consultait le cycle de vie ; un `Passage` mal construit par un provider (opposable=True, etat=ABROGE) passait `AUTHENTIFIÉ`. Corrigé : le vérificateur re-contrôle `metadata["etat"]` — tout état ≠ VIGUEUR force `CITÉ_NON_OPPOSABLE` au mieux, quel que soit le provider.
+6. **Sélection silencieuse en cas d'ambiguïté (moulineuse.py + orchestration.py)** : `rows[0]` sur un LIKE `%civil%` matchant deux codes distincts pouvait servir le mauvais article, verbatim exact, `AUTHENTIFIÉ` (`candidate_count` était stocké mais jamais lu). Corrigé : `selection_ambiguous` posé quand plusieurs **textes distincts** matchent (plusieurs versions du même texte ne sont pas ambiguës), lu par l'orchestration → risque élevé. Idem route texte_libre (hits multiples).
+7. **Sur-refus de normalisation (§7/INV-013)** : comparaison verbatim sensible à la casse et à la ponctuation de bord (« Les contrats » cité « les contrats » → `NON_AUTHENTIFIÉ`), et `normalize_numeric` refusait « 14,5 » face à « 14.5 ». Corrigé : comparaison casefold + rognage de la ponctuation de bord de la citation (la détection de troncature suit les mêmes règles), virgule décimale normalisée en point. L'anti-épissage reste intact : le contrôle d'ellipse porte sur le claim brut. Unités et arrondis (INV-013) restent non traités.
+
 ## Relecture complète — 6 angles morts trouvés et corrigés
 
 Relecture systématique de tous les modules, chaque bug confirmé par un test reproductible en direct puis corrigé avec test de non-régression :
@@ -143,4 +168,4 @@ Relecture systématique de tous les modules, chaque bug confirmé par un test re
 - **Route question parlementaire (§6bis/§6ter)** : `MoulineuseRetrievalProvider.route="parlement_question"` via `get_parlement_item` (QE/QOSD/QG). Non opposable par nature → `CITÉ_NON_OPPOSABLE`, jamais `AUTHENTIFIÉ`. Testé en direct sur la QOSD n°812 : le système a démontré le piège A2 (prémisse fausse) en refusant d'inventer une commune absente du texte officiel.
 - **Faux négatif sur les paraphrases fidèles corrigé (§5/§7)** : le vérificateur exigeait un verbatim exact et bloquait toute reformulation correcte en `NON_AUTHENTIFIÉ`. Corrigé sur deux volets : (1) le prompt B distingue désormais citation exacte (`AUTHENTIFIÉ`) et reformulation (`INTERPRÉTATION`) ; (2) le vérificateur accepte une `INTERPRÉTATION` si ses termes sont **ancrés** dans le passage (recouvrement lexical déterministe ≥60%), sinon c'est une invention pure → `NON_AUTHENTIFIÉ`. Le mot `AUTHENTIFIÉ` reste réservé au verbatim exact (§7). Découvert parce qu'un vrai LLM produit des paraphrases, ce que les mocks ne montraient pas.
 - **`FileRetrievalProvider` pour les ressources non-tabulaires (§6ter)** : la plupart des ressources INSEE ne sont PAS dans l'API tabulaire de data.gouv (elles pointent vers des fichiers/pages externes). Ce provider télécharge le fichier, détecte défensivement son vrai format (magic bytes — le MIME déclaré ment : INSEE annonce `text/csv` pour un ZIP), extrait le CSV de données (refuse si ambigu), et adresse une cellule par filtres multi-colonnes (refus si 0 ou >1 ligne). Testé en direct : 891 naissances (dép. 06, juillet 2025) → `DONNÉE_TRACÉE`. XLSX/HTML non couverts (limite documentée). Branché dans `MultiSourceRetrievalProvider` (clé `filters`).
-- **Démonstrateur web (`ui/`)** : serveur `http.server` stdlib (zéro dépendance web) + page HTML unique. Champ question → décomposition Mistral → récupération réelle (4 routes normatives + 2 routes donnée) → vérification → statuts colorés + journal §8. Lancement : `python ui/server.py` puis http://localhost:8765. Quand le LLM ne produit rien (sur-refus fréquent de mistral-small, §12), un claim de contrôle déterministe extrait du passage démontre visuellement la garantie du vérificateur.
+- **Démonstrateur web (`ui/`)** : serveur `http.server` stdlib (zéro dépendance web) + page HTML unique. Champ question → décomposition Mistral → récupération réelle (4 routes normatives + 2 routes donnée) → vérification → statuts colorés + journal §8. Lancement : `python ui/server.py` puis http://localhost:8765. **Boucle de validation humaine câblée (§4 étape 9)** : le serveur porte un `HumanValidationRegistry` partagé entre les requêtes, chaque résultat à risque élevé affiche un panneau « Approuver / Rejeter » (pseudonyme de validateur obligatoire — décision anonyme refusée, §8/§13.4) qui enregistre la décision via `POST /validate` sous la clé (intent_id, passage_hash) ; reposer la même question réutilise la décision, exactement comme `SentinelGuard.ask`. Quand le LLM ne produit rien (sur-refus fréquent de mistral-small, §12), un claim de contrôle déterministe extrait du passage démontre visuellement la garantie du vérificateur.

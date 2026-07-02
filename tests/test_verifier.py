@@ -228,6 +228,124 @@ def test_verify_claims_does_not_flag_word_merely_starting_with_connector() -> No
     assert result.claims[0].truncation_flagged is False
 
 
+def test_interpretation_with_inverted_negation_is_refused() -> None:
+    # Ancre dure (§7, B3) : « n'est pas valide » ne doit pas s'ancrer comme
+    # « est valide » -- les marqueurs de négation de la reformulation doivent
+    # exister dans la source, même s'ils sont des stopwords pour le seuil de 60%.
+    passage = Passage(
+        source_id="neg1", source_type="normatif", opposable=False,
+        text="Le contrat conclu entre les parties est valide et produit tous ses effets.",
+        metadata={},
+    )
+    claims = [Claim(ref="Le contrat conclu entre les parties n'est pas valide.", status=ClaimStatus.INTERPRÉTATION)]
+    try:
+        verify_claims(claims, passage)
+        assert False, "Expected VerificationError"
+    except VerificationError as exc:
+        assert exc.result.claims[0].status == ClaimStatus.NON_AUTHENTIFIÉ
+
+
+def test_interpretation_with_faithful_negation_is_accepted() -> None:
+    # Contrôle de sur-refus : une reformulation qui reprend la négation
+    # présente dans la source reste acceptée ("n'" élidé ≡ "ne" plein).
+    passage = Passage(
+        source_id="neg2", source_type="normatif", opposable=False,
+        text="Le contrat conclu entre les parties ne produit pas ses effets à l'égard des tiers.",
+        metadata={},
+    )
+    claims = [Claim(ref="Le contrat conclu entre les parties n'a pas d'effets à l'égard des tiers.", status=ClaimStatus.INTERPRÉTATION)]
+    result = verify_claims(claims, passage)
+
+    assert result.claims[0].status == ClaimStatus.INTERPRÉTATION
+
+
+def test_interpretation_with_substituted_number_is_refused() -> None:
+    # Ancre dure (§7, B3) : un chiffre substitué (« 14 jours » au lieu de
+    # « 10 jours ») noyé dans une phrase par ailleurs fidèle est une
+    # distorsion, pas un ancrage -- tout token chiffré doit exister dans la source.
+    passage = Passage(
+        source_id="num1", source_type="normatif", opposable=False,
+        text="Le consommateur dispose d'un délai de rétractation de 10 jours à compter de la signature.",
+        metadata={},
+    )
+    claims = [Claim(ref="Le consommateur dispose d'un délai de rétractation de 14 jours après la signature.", status=ClaimStatus.INTERPRÉTATION)]
+    try:
+        verify_claims(claims, passage)
+        assert False, "Expected VerificationError"
+    except VerificationError as exc:
+        assert exc.result.claims[0].status == ClaimStatus.NON_AUTHENTIFIÉ
+
+
+def test_interpretation_with_faithful_number_is_accepted() -> None:
+    passage = Passage(
+        source_id="num2", source_type="normatif", opposable=False,
+        text="Le consommateur dispose d'un délai de rétractation de 10 jours à compter de la signature.",
+        metadata={},
+    )
+    claims = [Claim(ref="Le consommateur dispose d'un délai de rétractation de 10 jours après la signature.", status=ClaimStatus.INTERPRÉTATION)]
+    result = verify_claims(claims, passage)
+
+    assert result.claims[0].status == ClaimStatus.INTERPRÉTATION
+
+
+def test_verbatim_comparison_is_case_insensitive() -> None:
+    # §7 : la casse ne change pas la fidélité d'une citation -- une majuscule
+    # de début de phrase ne doit pas produire un NON_AUTHENTIFIÉ (sur-refus, §12).
+    passage = Passage(
+        source_id="case1", source_type="normatif", opposable=True,
+        text="Les contrats légalement formés tiennent lieu de loi à ceux qui les ont faits.",
+        metadata={},
+    )
+    claims = [Claim(ref="les contrats légalement formés tiennent lieu de loi", status=ClaimStatus.AUTHENTIFIÉ)]
+    result = verify_claims(claims, passage)
+
+    assert result.claims[0].status == ClaimStatus.AUTHENTIFIÉ
+
+
+def test_verbatim_comparison_ignores_edge_punctuation() -> None:
+    # §7 : un point final ajouté par la citation (le passage continue par une
+    # virgule) est de la ponctuation de bord, pas une infidélité -- et la
+    # troncature adjacente doit toujours être détectée sur la citation nettoyée.
+    passage = Passage(
+        source_id="punct1", source_type="normatif", opposable=True,
+        text="Le salarié bénéficie d'un délai de préavis de deux mois, sauf en cas de faute grave.",
+        metadata={},
+    )
+    claims = [Claim(ref="Le salarié bénéficie d'un délai de préavis de deux mois.", status=ClaimStatus.AUTHENTIFIÉ)]
+    result = verify_claims(claims, passage)
+
+    assert result.claims[0].status == ClaimStatus.AUTHENTIFIÉ
+    assert result.claims[0].truncation_flagged is True
+
+
+def test_opposable_passage_with_abrogated_etat_is_downgraded() -> None:
+    # Défense en profondeur C2 (§7) : le vérificateur re-contrôle le cycle de
+    # vie -- un Passage mal construit par un provider (opposable=True mais
+    # etat=ABROGE) ne produit jamais un AUTHENTIFIÉ.
+    passage = Passage(
+        source_id="c2-defense", source_type="normatif", opposable=True,
+        text="Le présent article fixe le délai à deux mois.",
+        metadata={"etat": "ABROGE"},
+    )
+    claims = [Claim(ref="Le présent article fixe le délai à deux mois.", status=ClaimStatus.AUTHENTIFIÉ)]
+    result = verify_claims(claims, passage)
+
+    assert result.claims[0].status == ClaimStatus.CITÉ_NON_OPPOSABLE
+
+
+def test_traced_data_accepts_decimal_comma_vs_point() -> None:
+    # INV-013 : "14,5" et "14.5" sont la même valeur -- pas de refus sur la
+    # convention décimale.
+    passage = Passage(
+        source_id="data1", source_type="donnee", opposable=True,
+        text="14,5", metadata={},
+    )
+    claims = [Claim(ref="14.5", status=ClaimStatus.DONNÉE_TRACÉE)]
+    result = verify_claims(claims, passage)
+
+    assert result.claims[0].status == ClaimStatus.DONNÉE_TRACÉE
+
+
 def test_verify_claims_flags_connector_at_end_of_passage() -> None:
     # Un connecteur en toute fin de passage (frontière = fin de chaîne) est
     # une omission tout aussi réelle et doit être signalée.
