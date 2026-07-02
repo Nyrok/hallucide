@@ -31,24 +31,11 @@ import re  # noqa: E402
 
 from sentinel_guard import MistralModelProvider, SentinelGuard  # noqa: E402
 from sentinel_guard.exceptions import RetrievalError, SentinelGuardError, VerificationError  # noqa: E402
-from sentinel_guard.human_validation import (  # noqa: E402
-    HumanValidationRegistry,
-    ValidationDecision,
-    ValidationKey,
-)
 from sentinel_guard.mcp_client import McpToolClient  # noqa: E402
 from sentinel_guard.types import Claim, ClaimStatus  # noqa: E402
 from sentinel_guard.verifier import verify_claims  # noqa: E402
 
 HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
-
-# §4 étape 9 : le registre de décisions humaines est PARTAGÉ entre les
-# requêtes (durée de vie du serveur) -- une approbation donnée sur une
-# intention reste valable si la même question est reposée (même intent_id +
-# même passage_hash), exactement comme dans SentinelGuard.ask. C'est ici que
-# le contrôle de l'information revient à l'humain : rien à risque élevé n'est
-# publiable sans une décision explicite enregistrée dans ce registre.
-VALIDATION_REGISTRY = HumanValidationRegistry()
 
 # --- Routage automatique déterministe (§4bis : transparent, jamais opaque) ---
 
@@ -229,7 +216,7 @@ def _run_pipeline(message: str, route: str, form: dict) -> dict:
         return {"error": "MISTRAL_API_KEY absente du .env"}
 
     model = MistralModelProvider(api_key=api_key)
-    guard = SentinelGuard(model_provider=model, validation_registry=VALIDATION_REGISTRY)
+    guard = SentinelGuard(model_provider=model)
     query = _build_query(route, form)
 
     try:
@@ -285,9 +272,10 @@ def _run_pipeline(message: str, route: str, form: dict) -> dict:
             "risk_tier": r.risk_tier.value,
             "published": result.published[idx],
             "human_validation": entry.human_validation,
-            # Clé de validation (§4 étape 9) : ce que l'humain approuve, c'est
-            # CETTE intention sur CE contenu vérifié (hash rejouable §8) -- pas
-            # une question en général.
+            # Clé de validation (§4 étape 9) : la décision humaine se prend
+            # HORS de cette UI (circuit de validation de l'institution, via le
+            # HumanValidationRegistry du cœur) -- l'UI se contente d'afficher
+            # la clé qui identifie CETTE intention sur CE contenu vérifié.
             "validation_key": {
                 "intent_id": r.intent.id,
                 "passage_hash": entry.passage_hashes[0],
@@ -302,38 +290,6 @@ def _run_pipeline(message: str, route: str, form: dict) -> dict:
         "coverage_passed": result.orchestration.coverage_passed,
         "session_ref": result.session_ref,
         "intents": intents_out,
-    }
-
-
-def _record_validation(payload: dict) -> dict:
-    """§4 étape 9 : enregistre la décision humaine (approbation ou rejet)
-    pour une intention identifiée par (intent_id, passage_hash). Le
-    validator_ref est un pseudonyme (§13.4) -- jamais une identité en clair.
-    """
-    intent_id = str(payload.get("intent_id", "")).strip()
-    p_hash = str(payload.get("passage_hash", "")).strip()
-    decision_raw = str(payload.get("decision", "")).strip().lower()
-    validator_ref = str(payload.get("validator_ref", "")).strip()
-
-    if not intent_id or not p_hash:
-        return {"error": "intent_id et passage_hash sont requis."}
-    if decision_raw not in (ValidationDecision.APPROVED.value, ValidationDecision.REJECTED.value):
-        return {"error": f"Décision inconnue '{decision_raw}' (attendu: approved | rejected)."}
-    if not validator_ref:
-        return {"error": "validator_ref (pseudonyme du validateur) est requis -- une décision anonyme n'est pas traçable (§8)."}
-
-    key = ValidationKey(intent_id=intent_id, passage_hash=p_hash)
-    record = VALIDATION_REGISTRY.record_decision(
-        key,
-        ValidationDecision(decision_raw),
-        validator_ref=validator_ref,
-        comment=str(payload.get("comment", "")).strip() or None,
-    )
-    return {
-        "human_validation": record.decision.value,
-        "published": record.decision == ValidationDecision.APPROVED,
-        "validator_ref": record.validator_ref,
-        "timestamp": record.timestamp,
     }
 
 
@@ -361,16 +317,14 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
-        if self.path not in ("/ask", "/resolve", "/validate"):
+        if self.path not in ("/ask", "/resolve"):
             self.send_error(404)
             return
         length = int(self.headers.get("Content-Length", 0))
         payload = json.loads(self.rfile.read(length).decode("utf-8"))
 
         try:
-            if self.path == "/validate":
-                result = _record_validation(payload)
-            elif self.path == "/resolve":
+            if self.path == "/resolve":
                 # Étape 1 : détecter la source + proposer les candidats UID.
                 message = payload.get("message", "")
                 detection = detect_route(message)

@@ -56,7 +56,7 @@ Puis ouvrir **http://localhost:8765** dans un navigateur.
 
 - Saisir une question, ou cliquer « 🔎 Détecter la source automatiquement » pour laisser le système proposer la route (article de code / question parlementaire / donnée chiffrée / recherche libre) et résoudre l'UID si besoin.
 - Chaque intention affiche un statut coloré (`AUTHENTIFIÉ` / `CITÉ_NON_OPPOSABLE` / `NON_AUTHENTIFIÉ` / `INTERPRÉTATION` / `DONNÉE_TRACÉE` / `NO_ANSWER`) et le journal de conformité rejouable (§8).
-- **Validation humaine (§4 étape 9)** : tout résultat à risque élevé affiche un panneau « Approuver / Rejeter » (pseudonyme de validateur obligatoire). La décision est enregistrée côté serveur sous la clé (intent_id, passage_hash) et reste valable si la même question est reposée. Rien à risque élevé n'est publiable sans décision humaine explicite.
+- **Marquage « intervention humaine requise » (§4 étape 9)** : tout résultat à risque élevé porte un marquage visuel explicite (badge 🧑‍⚖️ + motifs possibles + clé de validation `intent_id`/`passage_hash`) et reste « NON PUBLIABLE en l'état ». La décision d'approbation/rejet ne se prend pas dans cette page : elle relève du circuit de validation de l'institution, via le `HumanValidationRegistry` du cœur.
 - Arrêt : `Ctrl+C` dans le terminal où le serveur tourne.
 
 Si le port 8765 est déjà occupé (serveur précédent non arrêté), le retrouver et l'arrêter avant de relancer :
