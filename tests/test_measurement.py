@@ -3,12 +3,13 @@ from sentinel_guard.measurement import (
     TrapCase,
     TriageCase,
     evaluate_case,
+    run_document_measurement,
     run_measurement,
     run_triage_measurement,
 )
-from sentinel_guard.trap_dataset import TRAP_DATASET, TRIAGE_DATASET
+from sentinel_guard.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET
 from sentinel_guard.triage import RiskTier
-from sentinel_guard.types import Claim, ClaimStatus, Passage
+from sentinel_guard.types import Claim, ClaimStatus, DocumentMode, Passage
 
 
 def test_evaluate_case_correct_for_exact_citation() -> None:
@@ -85,6 +86,24 @@ def test_triage_dataset_has_zero_false_negatives() -> None:
 
     assert report.false_negative_rate == 0.0
     assert report.false_negatives == 0
+
+
+def test_document_trap_dataset_blocks_all_traps_without_over_refusal() -> None:
+    # §12 (v4) : le jeu de test documentaire de référence doit démontrer un
+    # blocage correct de 100% (dont B5) et 0% de sur-refus, mode par mode.
+    report = run_document_measurement(DOCUMENT_TRAP_DATASET)
+
+    assert all(r.correct for r in report.results)
+    for mode, rate in report.over_refusal_rate_by_mode.items():
+        assert rate == 0.0, f"sur-refus en mode {mode}"
+    for mode, rate in report.correct_blocking_rate_by_mode.items():
+        assert rate == 1.0, f"blocage incorrect en mode {mode}"
+
+
+def test_document_trap_dataset_covers_all_three_modes_and_b5() -> None:
+    modes = {c.draft.mode for c in DOCUMENT_TRAP_DATASET}
+    assert modes == {DocumentMode.ANALYSE, DocumentMode.SYNTHÈSE, DocumentMode.PRODUCTION}
+    assert any(c.trap_type == "B5" for c in DOCUMENT_TRAP_DATASET)
 
 
 def test_triage_measurement_detects_a_real_false_negative() -> None:

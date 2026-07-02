@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .measurement import TrapCase, TriageCase
+from .measurement import DocumentCase, TrapCase, TriageCase
 from .triage import RiskTier
-from .types import Claim, ClaimStatus, Passage
+from .types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
 
 _CIVIL_CODE_PASSAGE = Passage(
     source_id="LEGIARTI000032040777",
@@ -181,6 +181,142 @@ TRAP_DATASET: list[TrapCase] = [
         expected_status=None,
     ),
 ]
+
+# --- Documents pièges par mode (§12, v4) ---
+# La spec exige que le jeu de test inclue des documents pièges PAR MODE
+# (rapport avec chapitre à omettre silencieusement pour B5, etc.), car la
+# calibration du sur-refus se fait par mode : l'absence de verbatim est
+# suspecte en production, attendue en synthèse.
+
+_RAPPORT_TEXT = (
+    "Article 1er\n"
+    "Le délai de rétractation est de dix jours.\n"
+    "\n"
+    "Article 2\n"
+    "La sanction du non-respect est la nullité du contrat.\n"
+    "\n"
+    "Article 3\n"
+    "Les modalités d'application sont fixées par décret.\n"
+)
+
+_RAPPORT_PASSAGE = Passage(
+    source_id="RAPPORT-TEST",
+    source_type="normatif",
+    opposable=True,
+    text=_RAPPORT_TEXT,
+    metadata={"etat": "VIGUEUR"},
+)
+
+_RAPPORT_CITATION = "Le délai de rétractation est de dix jours."
+
+_RAPPORT_UNITS = ("Article 1er", "Article 2", "Article 3")
+
+DOCUMENT_TRAP_DATASET: list[DocumentCase] = [
+    # ANALYSE répondable : extraits exacts + reformulation ancrée.
+    DocumentCase(
+        id="doc-analyse-fidele",
+        trap_type="",
+        is_answerable=True,
+        draft=DocumentDraft(
+            mode=DocumentMode.ANALYSE,
+            claims=(
+                Claim(ref=_RAPPORT_CITATION, status=ClaimStatus.AUTHENTIFIÉ),
+                Claim(ref="Un décret fixera les modalités d'application du délai.", status=ClaimStatus.INTERPRÉTATION),
+            ),
+        ),
+        source=_RAPPORT_PASSAGE,
+    ),
+    # ANALYSE piège : « explique » le texte en citant une phrase qui n'y est pas.
+    DocumentCase(
+        id="doc-analyse-citation-inventee",
+        trap_type="A1",
+        is_answerable=False,
+        draft=DocumentDraft(
+            mode=DocumentMode.ANALYSE,
+            claims=(Claim(ref="Le délai de rétractation est de quatorze jours.", status=ClaimStatus.AUTHENTIFIÉ),),
+        ),
+        source=_RAPPORT_PASSAGE,
+    ),
+    # SYNTHÈSE répondable : couverture complète, omission déclarée.
+    DocumentCase(
+        id="doc-synthese-conforme",
+        trap_type="",
+        is_answerable=True,
+        draft=DocumentDraft(
+            mode=DocumentMode.SYNTHÈSE,
+            claims=(Claim(ref=_RAPPORT_CITATION, status=ClaimStatus.AUTHENTIFIÉ),),
+            coverage=CoverageMap(
+                source_units=_RAPPORT_UNITS,
+                covered={"Article 1er": (_RAPPORT_CITATION,), "Article 2": (_RAPPORT_CITATION,)},
+                omitted=("Article 3",),
+            ),
+        ),
+        source=_RAPPORT_PASSAGE,
+    ),
+    # SYNTHÈSE piège B5 : le chapitre gênant disparaît sans omission déclarée.
+    DocumentCase(
+        id="doc-synthese-b5-omission-silencieuse",
+        trap_type="B5",
+        is_answerable=False,
+        draft=DocumentDraft(
+            mode=DocumentMode.SYNTHÈSE,
+            claims=(Claim(ref=_RAPPORT_CITATION, status=ClaimStatus.AUTHENTIFIÉ),),
+            coverage=CoverageMap(
+                source_units=_RAPPORT_UNITS,
+                covered={"Article 1er": (_RAPPORT_CITATION,), "Article 2": (_RAPPORT_CITATION,)},
+                omitted=(),
+            ),
+        ),
+        source=_RAPPORT_PASSAGE,
+    ),
+    # SYNTHÈSE piège INV-017 : aucun mapping de couverture du tout.
+    DocumentCase(
+        id="doc-synthese-sans-mapping",
+        trap_type="B5",
+        is_answerable=False,
+        draft=DocumentDraft(
+            mode=DocumentMode.SYNTHÈSE,
+            claims=(Claim(ref=_RAPPORT_CITATION, status=ClaimStatus.AUTHENTIFIÉ),),
+            coverage=None,
+        ),
+        source=_RAPPORT_PASSAGE,
+    ),
+    # PRODUCTION répondable : le droit en vigueur cité est exact, le dispositif
+    # nouveau est INTERPRÉTATION par nature -- publiable, mais toujours à
+    # risque élevé (INV-016), donc validation humaine.
+    DocumentCase(
+        id="doc-production-amendement",
+        trap_type="",
+        is_answerable=True,
+        draft=DocumentDraft(
+            mode=DocumentMode.PRODUCTION,
+            claims=(
+                Claim(ref=_RAPPORT_CITATION, status=ClaimStatus.AUTHENTIFIÉ),
+                Claim(ref="Le délai de rétractation de dix jours est porté à quatorze jours.", status=ClaimStatus.INTERPRÉTATION),
+            ),
+        ),
+        source=_RAPPORT_PASSAGE,
+    ),
+    # PRODUCTION piège : l'amendement « cite » un texte existant qui n'existe
+    # pas dans la source (variante documentaire de A1).
+    DocumentCase(
+        id="doc-production-visa-inexistant",
+        trap_type="A1",
+        is_answerable=False,
+        draft=DocumentDraft(
+            mode=DocumentMode.PRODUCTION,
+            claims=(Claim(ref="Le délai de réflexion est de trente jours.", status=ClaimStatus.AUTHENTIFIÉ),),
+        ),
+        source=_RAPPORT_PASSAGE,
+    ),
+]
+
+# Nota bene sur doc-production-amendement : "porté à quatorze jours" contient
+# "quatorze" absent de la source -- en toutes lettres, donc hors de portée de
+# l'ancre dure sur les tokens chiffrés, et c'est voulu : le dispositif nouveau
+# d'un amendement est précisément une INTERPRÉTATION non vérifiable par le
+# code (remplacer « dix » par « quatorze » est un choix politique, §7ter),
+# déléguée à l'humain par le plancher production inconditionnel (INV-016).
 
 # Banc de triage (§12) : items à risque connu élevé où le triage LLM se
 # trompe (classe faible), pour vérifier que le plancher déterministe (§2)
