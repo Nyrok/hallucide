@@ -55,7 +55,7 @@ def test_compliance_log_has_required_fields() -> None:
     assert entry.verbatim_check == "PASS"
     assert entry.compliance_status == "VALIDATED"
     assert entry.human_validation == "n/a"
-    assert entry.governance_version == "v3"
+    assert entry.governance_version == "v4"
     assert entry.query == "Quelle est la règle ?"
     assert len(entry.passage_hashes) == 1
     assert len(entry.passage_hashes[0]) == 64  # sha256 hex digest

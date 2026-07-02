@@ -1,8 +1,8 @@
 # Sentinel Guard
 
-Orchestrateur de gouvernance pour la fidélité documentaire (spec v3) : un pipeline déterministe qui décompose une question, récupère des passages depuis des sources officielles réelles, et vérifie chaque citation mot pour mot avant publication — sans jamais faire confiance au LLM pour juger de sa propre fidélité.
+Orchestrateur de gouvernance pour la fidélité documentaire (spec v4) : un pipeline déterministe qui décompose une question, récupère des passages depuis des sources officielles réelles, et vérifie chaque citation mot pour mot avant publication — sans jamais faire confiance au LLM pour juger de sa propre fidélité. Le **mode document** (v4) étend la garantie aux notes, synthèses et amendements : un document est une liste de claims vérifiés un à un, jamais un « document vérifié » en bloc.
 
-157 tests, exemples exécutables + démonstrateur web. Statut détaillé section par section : voir `STATUS.md`.
+173 tests, exemples exécutables + démonstrateur web. Statut détaillé section par section : voir `STATUS.md` ; spécification : `sentinel-guard-spec-v4.md`.
 
 ## Prérequis
 
@@ -93,6 +93,7 @@ Toutes vérifiées en conditions réelles, pas seulement en mocks (voir `example
 - Le plancher de risque ne peut jamais descendre sous `élevé` une fois qu'une condition déterministe est détectée (§2/INV-011) : référence inférée, troncature, pertinence non garantie, couverture insuffisante, claim `INTERPRÉTATION` ou `CITÉ_NON_OPPOSABLE`, sélection ambiguë entre plusieurs candidats, ou query unique partagée entre plusieurs intentions (E1 dégradé).
 - Une `INTERPRÉTATION` doit ancrer **tous** ses marqueurs de négation et **toutes** ses valeurs chiffrées dans la source (ancres dures anti-distorsion B3), en plus du recouvrement lexical ≥60%.
 - L'opposabilité dérive du type de document et de son cycle de vie, jamais d'un flag de requête ni du modèle (INV-010).
+- **Mode document (v4, §7ter)** : un document n'a jamais de statut agrégé — chaque claim garde le sien (INV-015) ; un document en mode production est toujours à risque élevé, une synthèse de source normative aussi (INV-016) ; une synthèse doit couvrir ou déclarer omise chaque unité structurelle segmentée par le code — l'omission silencieuse (piège B5) bloque la publication (INV-017).
 - Une intention à risque élevé n'est jamais publiée sans décision humaine explicite, capturée et journalisée (§4 étape 9).
 - Le journal de conformité ne contient jamais la question posée ni une identité (§13.4) — garde-fou vérifié par assertion, pas par convention.
 
@@ -102,7 +103,7 @@ Toutes vérifiées en conditions réelles, pas seulement en mocks (voir `example
 python -m pytest
 ```
 
-**157 tests automatisés**, dont 16 tests de non-régression couvrant la seconde relecture (voir `STATUS.md`, « Relecture 2 ») : plancher de risque sur les statuts faibles (`INTERPRÉTATION`/`CITÉ_NON_OPPOSABLE`), ancres dures négation/chiffres, suppression de `opposable_override`, mode dégradé E1 (query partagée), re-contrôle d'abrogation dans le vérificateur, sélection ambiguë, insensibilité casse/ponctuation de bord, virgule décimale.
+**173 tests automatisés**, dont 16 tests du mode document v4 (`tests/test_document.py` — INV-015/016/017, piège B5, segmentation, mesure par mode ; démo exécutable : `python examples/run_document_mode.py`) et 16 tests de non-régression couvrant la seconde relecture (voir `STATUS.md`, « Relecture 2 ») : plancher de risque sur les statuts faibles (`INTERPRÉTATION`/`CITÉ_NON_OPPOSABLE`), ancres dures négation/chiffres, suppression de `opposable_override`, mode dégradé E1 (query partagée), re-contrôle d'abrogation dans le vérificateur, sélection ambiguë, insensibilité casse/ponctuation de bord, virgule décimale.
 
 ### Tests en conditions réelles (démonstrateur, 2026-07-02)
 

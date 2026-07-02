@@ -1,8 +1,10 @@
-# Statut d'implémentation — Sentinel-Guard v3
+# Statut d'implémentation — Sentinel-Guard v4
 
-Dernière mise à jour : voir date du commit. 157 tests passent (`python -m pytest`).
+Dernière mise à jour : voir date du commit. 173 tests passent (`python -m pytest`).
 
-Estimation globale : **~87%** de la spec v3 implémentée. Le cœur de la garantie (§2, §4, §6, §7, §14, §15) est complet et vérifié en conditions réelles. L'infrastructure de mesure (§12), y compris la calibration inter-annotateur, est codée et testée ; il ne manque que de vraies annotations humaines pour l'exercer en conditions réelles. Le seul point structurellement hors de portée du code seul reste D1-D3/C3/E3, que la spec elle-même classe limite mathématique du contrôle déterministe (§10).
+Le delta v3 → v4 (mode document §7ter, piège B5, INV-015/016/017, mesure par mode, types v4) est implémenté — voir la section « Delta v4 » ci-dessous.
+
+Estimation globale : **~87%** de la spec v3 implémentée (+ delta v4 complet). Le cœur de la garantie (§2, §4, §6, §7, §14, §15) est complet et vérifié en conditions réelles. L'infrastructure de mesure (§12), y compris la calibration inter-annotateur, est codée et testée ; il ne manque que de vraies annotations humaines pour l'exercer en conditions réelles. Le seul point structurellement hors de portée du code seul reste D1-D3/C3/E3, que la spec elle-même classe limite mathématique du contrôle déterministe (§10).
 
 ## Par section
 
@@ -20,13 +22,14 @@ Estimation globale : **~87%** de la spec v3 implémentée. Le cœur de la garant
 | §6ter Opposabilité/data.gouv | ~92% | `datagouv.py`, `moulineuse.py`, `file_retrieval.py` | Sources réelles branchées et prouvées en direct : normatif (Moulineuse), donnée tabulaire (data.gouv API), donnée non-tabulaire (fichiers CSV/ZIP téléchargés — couvre l'INSEE dont la plupart des ressources ne sont PAS dans l'API tabulaire) |
 | §7 Vérificateur déterministe | ~95% | `verifier.py`, `normalization.py` | Contiguïté (insensible casse/ponctuation de bord), anti-épissage, opposabilité avec re-contrôle du cycle de vie (`etat`), anti-troncature, ancres dures négation/chiffres sur les INTERPRÉTATION |
 | §7bis Refus | 90% | `exceptions.py`, `verifier.py` | Levée systématique, jamais de devinette |
+| **§7ter Mode document (v4)** | **~90%** | `document.py`, `types.py`, `measurement.py` | 3 modes (analyse/synthèse/production), segmentation par le code, couverture documentaire (INV-017/B5), planchers par mode (INV-016), aucun statut agrégé (INV-015). Reste : lookup d'existence article/alinéa visé en mode production (nécessite une récupération, couvert en attendant par le plancher élevé inconditionnel) |
 | §8 Registre | ~90% | `audit.py` | `passage_hashes` rejouables, intégré dans la façade unifiée |
 | §9 API vs local | N/A | — | Narratif, satisfait par construction (agnostique au provider) |
 | §10 Matrice des pièges | ~70% | multiples | A1,A2,A3,B1,B2,B4,C1,C2,E1,E2,E4,F1 traités. **D1-D3,C3,E3 hors de portée du code seul** (jugement humain par construction, cf. §10 de la spec) |
-| §12 Mesure | ~95% | `measurement.py`, `trap_dataset.py`, `calibration.py` | Banc réel sur vérificateur+triage : 100% blocage correct, 0% sur-refus, 0% faux négatifs. Kappa de Cohen inter-annotateur implémenté et testé (accord parfait, partiel, désaccord systématique) — reste à exercer avec de vraies annotations humaines sur le gold standard, ce qui est une activité humaine, pas un manque de code |
+| §12 Mesure | ~95% | `measurement.py`, `trap_dataset.py`, `calibration.py` | Banc réel sur vérificateur+triage : 100% blocage correct, 0% sur-refus, 0% faux négatifs. **(v4)** sur-refus mesuré par mode document. Kappa de Cohen inter-annotateur implémenté et testé (accord parfait, partiel, désaccord systématique) — reste à exercer avec de vraies annotations humaines sur le gold standard, ce qui est une activité humaine, pas un manque de code |
 | §13 Déploiement souverain | ~40% | `sovereign_log.py` | §13.4 (cloisonnement logs) codé et câblé dans `SentinelGuard`. §13.1-13.3,13.5 narratif/DSI, non codable |
-| §14 Invariants | ~80% | multiples | Majorité vérifiable par construction/tests. INV-009 narratif, INV-014 pas de scan d'imports dédié |
-| §15 Interfaces canoniques | ~95% | `types.py` | Correspondance quasi exacte avec les pseudo-types de la spec |
+| §14 Invariants | ~85% | multiples | Majorité vérifiable par construction/tests, **INV-015/016/017 (v4) testés**. INV-009 narratif, INV-014 pas de scan d'imports dédié |
+| §15 Interfaces canoniques | ~95% | `types.py` | Correspondance quasi exacte avec les pseudo-types de la spec, **types v4 inclus** (`DocumentMode`, `DocumentDraft`, `CoverageMap`) |
 | §16 Priorité des règles | N/A | — | Respecté par construction du code |
 | §17 Dépendances externes | ~75% | `mcp_client.py`, `litellm_provider.py` | `mcp` épinglé. LiteLLM implémenté (`litellm` + `truststore` en optional-dependency `litellm`), vérifié en direct sur Mistral. deepeval/ragas/doccano absents par choix (cohérent INV-014, mesure hors-runtime) |
 
@@ -41,6 +44,7 @@ Estimation globale : **~87%** de la spec v3 implémentée. Le cœur de la garant
 | B2 — citation tronquée | ✅ borné | `_detect_adjacent_truncation`, élévation auto |
 | B3 — paraphrase distordue | ✅ borné | ellipsis → `INTERPRÉTATION` ; ancres dures négation/chiffres ; toute `INTERPRÉTATION` → risque élevé → humain |
 | B4 — épissage de fragments | ✅ verrouillé | règle de contiguïté stricte |
+| **B5 — synthèse à trou (v4)** | ✅ borné | couverture documentaire (`document.py`, INV-017) : toute unité segmentée par le code est couverte ou déclarée omise ; résidu (omission interne à une unité couverte) → humain |
 | C1 — source hors-sujet | ✅ borné | route texte_libre, `pertinence_non_garantie` |
 | C2 — source périmée | ✅ borné | `ETAT`/`opposable` à la récupération + re-contrôle de `metadata["etat"]` dans le vérificateur (défense en profondeur) |
 | C3 — mauvaise juridiction | ❌ non traité | nécessite corpus multi-juridictionnel réel |
@@ -74,6 +78,7 @@ Estimation globale : **~87%** de la spec v3 implémentée. Le cœur de la garant
 | `llm.py` | Abstraction LLM, prompts, parsing JSON |
 | `gemini.py` / `mistral.py` | Providers LLM réels (wrappers HTTP maison) |
 | `litellm_provider.py` | Provider LLM via LiteLLM (§17.1), auto-détection du magasin de certificats OS |
+| `document.py` | Mode document v4 (§7ter) : segmentation, couverture documentaire, planchers par mode |
 | `human_validation.py` | Registre de décisions humaines (§4 étape 9) |
 | `audit.py` | Registre de conformité, hashes rejouables (§8) |
 | `sovereign_log.py` | Cloisonnement conformité/accès (§13.4) |
@@ -126,6 +131,19 @@ Gemini, Mistral et LiteLLM ont tous été confirmés fonctionnels de bout en bou
 - **Conflit `SentinelGuard.confidential`** : un paramètre configurable produisait des entrées de log rejetées par le `SovereignLogStore` (qui refuse toute entrée avec `query` par construction). Résolu en supprimant l'option — utiliser `SentinelGuard` implique le mode souverain par construction.
 - **Vestige `tool_choice` incohérent (§6)** : `PromptBasedDecomposer`/`PromptBasedIntentGenerator` calculaient `tool_choice="required" if supports_forced_tool_calling else None` tout en passant systématiquement `tools=[]` — forcer un outil qui n'est jamais déclaré n'a aucun effet. Nettoyé : ces classes n'appellent jamais MCP elles-mêmes (l'orchestrateur le fait toujours en amont), donc `tool_choice=None` sans condition, avec le choix architectural documenté en commentaire.
 - **LiteLLM bloqué par l'environnement puis débloqué (§17)** : `litellm.completion()` échouait en `SSL: CERTIFICATE_VERIFY_FAILED` via `httpx`/`certifi`, alors que les wrappers `urllib` de `gemini.py`/`mistral.py` fonctionnaient. Cause confirmée : Avast Antivirus fait de l'inspection HTTPS et installe son certificat racine (`CN=Avast Web/Mail Shield Root`) dans le magasin Windows natif (`Cert:\LocalMachine\Root`, utilisé par `urllib`), jamais dans le bundle Mozilla embarqué de `certifi` (utilisé par `httpx`). `SSL_CERT_FILE` ne suffisait pas. Débloqué avec le paquet `truststore`, qui patche `ssl` pour utiliser l'API native de l'OS (`SChannel` sous Windows) au lieu du bundle certifi — portable sur toute machine avec inspection HTTPS (antivirus ou proxy d'entreprise), sans export manuel de certificat. `LiteLLMModelProvider` l'injecte automatiquement à l'initialisation. Vérifié en direct sur Mistral via LiteLLM.
+
+## Delta v4 — mode document (§7ter) implémenté
+
+Le journal de modifications v3 → v4 de la spec est couvert point par point (16 tests dédiés, `tests/test_document.py`, exemple exécutable `examples/run_document_mode.py`) :
+
+- **§7ter / §15** — `DocumentMode` (analyse | synthèse | production), `DocumentDraft`, `CoverageMap` dans `types.py` ; `document.py` porte `verify_document`, `segment_source_units`, `check_documentary_coverage`. Chaque claim est vérifié individuellement par le vérificateur §7 existant (ancres dures et re-contrôle d'abrogation inclus).
+- **INV-015** — `DocumentVerificationResult` n'expose AUCUN statut agrégé : la mosaïque des statuts vit claim par claim ; `publishable` est une porte de conformité (refus §7bis ou violation INV-017), pas un label de qualité, et n'exempte jamais de la validation humaine en risque élevé.
+- **INV-016 / §2** — plancher élevé inconditionnel en mode production ; élevé en synthèse d'une source normative (`source_type == "normatif"`) ; cumulé aux conditions communes (statuts faibles, troncature), jamais en remplacement. Contre-exemple testé : synthèse d'une donnée tracée exacte → risque faible.
+- **INV-017 / B5** — la segmentation en unités structurelles est faite par le CODE (en-têtes « Article/Chapitre/Section/Titre/Livre/Annexe », repli paragraphes), jamais par le LLM — sinon le périmètre de couverture serait manipulable. Le mapping fourni doit : porter exactement les unités du code, couvrir ou déclarer omise chaque unité, ne référencer que des claims existants (lookup). Une synthèse sans mapping n'est pas publiable ; le cas canonique de la spec (n sections, n-1 mappées, zéro omission déclarée → blocage) est testé.
+- **§12 (v4)** — `run_document_measurement` + `DocumentMeasurementReport` : taux de sur-refus et de blocage correct calculés PAR MODE (`over_refusal_rate_by_mode`), démontré par un banc où la synthèse a du sur-refus sans que la production en ait.
+- **§8** — `governance_version` passe à `"v4"`.
+
+Limite assumée (documentée dans `document.py`) : le lookup d'existence de l'article/alinéa visé par un amendement (mode production) exige une récupération — il relève de l'appelant via les routes §6bis ; le plancher élevé inconditionnel garantit qu'aucune production ne contourne l'humain en attendant.
 
 ## Tests en direct du démonstrateur (2026-07-02) — boucle humaine validée
 

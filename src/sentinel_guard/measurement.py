@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+from .document import verify_document
 from .exceptions import InvalidClaimError, VerificationError
 from .triage import RiskTier, apply_risk_floor
-from .types import Claim, ClaimStatus, Passage
+from .types import Claim, ClaimStatus, DocumentDraft, Passage
 from .verifier import verify_claims
 
 REFUS = "REFUS_VÉRIFICATION"
@@ -158,3 +159,84 @@ def run_triage_measurement(cases: list[TriageCase]) -> TriageReport:
         if case.expected_risk == RiskTier.ÉLEVÉ and actual != RiskTier.ÉLEVÉ:
             false_negatives += 1
     return TriageReport(total=len(cases), false_negatives=false_negatives)
+
+
+# --- Mesure par mode document (§12, v4) ---
+
+
+@dataclass(frozen=True)
+class DocumentCase:
+    """Cas du banc documentaire (§12 v4) : un DocumentDraft à verdict connu.
+
+    `is_answerable=True` : on attend une publication (blocage = sur-refus).
+    `is_answerable=False` : cas piège (ex. B5), on attend un blocage.
+    """
+
+    id: str
+    trap_type: str
+    is_answerable: bool
+    draft: DocumentDraft
+    source: Passage
+
+
+@dataclass(frozen=True)
+class DocumentCaseResult:
+    case: DocumentCase
+    publishable: bool
+    correct: bool
+
+
+@dataclass(frozen=True)
+class DocumentMeasurementReport:
+    """§12 (v4) : le taux de sur-refus se mesure PAR MODE. L'absence de
+    verbatim est suspecte en production, attendue en synthèse -- un seuil
+    unique calibré pour la production bloquerait toute synthèse, et
+    réciproquement laisserait tout passer.
+    """
+
+    results: tuple[DocumentCaseResult, ...]
+
+    def _by_mode(self) -> dict[str, list[DocumentCaseResult]]:
+        grouped: dict[str, list[DocumentCaseResult]] = {}
+        for r in self.results:
+            grouped.setdefault(r.case.draft.mode.value, []).append(r)
+        return grouped
+
+    @property
+    def over_refusal_rate_by_mode(self) -> dict[str, float]:
+        rates: dict[str, float] = {}
+        for mode, results in sorted(self._by_mode().items()):
+            answerable = [r for r in results if r.case.is_answerable]
+            if not answerable:
+                rates[mode] = 0.0
+                continue
+            wrongly_blocked = sum(1 for r in answerable if not r.publishable)
+            rates[mode] = wrongly_blocked / len(answerable)
+        return rates
+
+    @property
+    def correct_blocking_rate_by_mode(self) -> dict[str, float]:
+        rates: dict[str, float] = {}
+        for mode, results in sorted(self._by_mode().items()):
+            traps = [r for r in results if not r.case.is_answerable]
+            if not traps:
+                rates[mode] = 1.0
+                continue
+            rates[mode] = sum(1 for r in traps if r.correct) / len(traps)
+        return rates
+
+
+def run_document_measurement(cases: list[DocumentCase]) -> DocumentMeasurementReport:
+    """Exécute chaque cas contre verify_document (§7ter), sans LLM (INV-014)."""
+    results: list[DocumentCaseResult] = []
+    for case in cases:
+        outcome = verify_document(case.draft, case.source)
+        expected_publishable = case.is_answerable
+        results.append(
+            DocumentCaseResult(
+                case=case,
+                publishable=outcome.publishable,
+                correct=outcome.publishable == expected_publishable,
+            )
+        )
+    return DocumentMeasurementReport(results=tuple(results))

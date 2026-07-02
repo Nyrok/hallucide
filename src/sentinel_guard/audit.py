@@ -9,7 +9,7 @@ from typing import Any
 from .normalization import normalize_text
 from .types import IntentExecutionResult, OrchestrationResult, RiskTier
 
-GOVERNANCE_VERSION = "v3"
+GOVERNANCE_VERSION = "v4"
 
 
 def passage_hash(passage_text: str) -> str:

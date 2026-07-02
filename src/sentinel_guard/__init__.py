@@ -3,6 +3,12 @@ from .calibration import Annotation, CalibrationReport, CohenKappaResult, comput
 from .core import AskResult, SentinelGuard
 from .coverage import CoverageResult, build_echo_back, check_coverage
 from .datagouv import DataGouvRetrievalProvider
+from .document import (
+    DocumentVerificationResult,
+    check_documentary_coverage,
+    segment_source_units,
+    verify_document,
+)
 from .exceptions import RetrievalError, SentinelGuardError, VerificationError
 from .file_retrieval import FileRetrievalProvider
 from .llm import ModelProvider, MockModelProvider, PromptBasedDecomposer, PromptBasedIntentGenerator
@@ -19,12 +25,16 @@ from .human_validation import (
 from .mcp_client import McpToolClient
 from .measurement import (
     CaseResult,
+    DocumentCase,
+    DocumentCaseResult,
+    DocumentMeasurementReport,
     MeasurementReport,
     TrapCase,
     TrapTypeMetrics,
     TriageCase,
     TriageReport,
     evaluate_case,
+    run_document_measurement,
     run_measurement,
     run_triage_measurement,
 )
@@ -47,6 +57,9 @@ from .triage import RiskTier, apply_risk_floor
 from .types import (
     Claim,
     ClaimStatus,
+    CoverageMap,
+    DocumentDraft,
+    DocumentMode,
     Intent,
     IntentExecutionResult,
     OrchestrationResult,
@@ -91,6 +104,17 @@ __all__ = [
     "generate_session_ref",
     "ClaimStatus",
     "Claim",
+    "CoverageMap",
+    "DocumentDraft",
+    "DocumentMode",
+    "DocumentVerificationResult",
+    "DocumentCase",
+    "DocumentCaseResult",
+    "DocumentMeasurementReport",
+    "check_documentary_coverage",
+    "segment_source_units",
+    "verify_document",
+    "run_document_measurement",
     "Intent",
     "IntentExecutionResult",
     "OrchestrationResult",
