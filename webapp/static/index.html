@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sentinel Guard — vérification anti-hallucination</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- En-tête : identité + contrôles (modèle, auto-détection) -->
+    <header class="app-header">
+      <div class="logo">🛡️</div>
+      <div>
+        <h1>Sentinel Guard</h1>
+        <p class="subtitle">Le code prouve, pas le modèle — chaque affirmation vérifiée mot pour mot.</p>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="controls">
+        <select id="model" class="model-select" title="Modèle de décomposition">
+          <option value="mistral">Mistral</option>
+          <option value="gemini">Gemini</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Fil de conversation (rempli par app.js) -->
+    <main id="thread" class="thread" aria-live="polite"></main>
+
+    <!-- Saisie -->
+    <form id="composer" class="composer">
+      <div id="route-slot"></div>
+      <div class="composer-row">
+        <textarea id="input" placeholder="Posez une question (ex. « Que dit l'article 1103 du code civil ? »)"
+                  rows="1" autocomplete="off"></textarea>
+        <button type="button" id="detect" class="btn btn-ghost" title="Détecter la source automatiquement">🔎 Détecter la source</button>
+        <button type="submit" id="send" class="btn btn-primary">Vérifier</button>
+      </div>
+      <p class="hint">Entrée = envoyer · Maj+Entrée = nouvelle ligne. Aucune réponse n'est simulée : si le moteur n'est pas connecté, l'interface le dit explicitement.</p>
+    </form>
+  </div>
+
+  <!-- Panneau latéral de traçabilité (ouvert au clic sur un claim/une intention) -->
+  <aside id="trace" class="trace-panel" aria-hidden="true">
+    <header>
+      <h3 id="trace-title">Traçabilité</h3>
+      <button class="close" id="trace-close" aria-label="Fermer">×</button>
+    </header>
+    <div id="trace-body" class="trace-body"></div>
+  </aside>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
