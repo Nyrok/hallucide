@@ -17,9 +17,12 @@
       </div>
       <div class="header-spacer"></div>
       <div class="controls">
+        <!-- Le backend reutilise ui/server.py qui utilise Mistral. Gemini est
+             affiche mais desactive : on ne fait PAS semblant de l'utiliser
+             (voir BLOCAGES.md, cablage Gemini = prochaine etape). -->
         <select id="model" class="model-select" title="Modèle de décomposition">
           <option value="mistral">Mistral</option>
-          <option value="gemini">Gemini</option>
+          <option value="gemini" disabled>Gemini (à câbler)</option>
         </select>
       </div>
     </header>
