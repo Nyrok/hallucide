@@ -1,25 +1,25 @@
-"""Backend de l'interface de chat futuriste (webapp/).
+"""Backend de l'interface de chat futuriste (demarche/etape_2_front/).
 
 Rôle : exposer le moteur Sentinel Guard à un front web moderne, SANS toucher au
 moteur ni au démonstrateur historique (ui/server.py reste le fallback intact).
 
-Choix d'architecture (voir webapp/README.md) :
+Choix d'architecture (voir demarche/etape_2_front/README.md) :
   - stdlib `http.server` uniquement → ZÉRO dépendance à installer, l'équipe lance
-    `python -m webapp.server` sans rien de plus que le moteur déjà installé.
+    `python -m demarche.etape_2_front.server` sans rien de plus que le moteur déjà installé.
   - On RÉUTILISE la logique éprouvée de ui/server.py (`_run_pipeline`, `detect_route`,
     `resolve_parlement_uid`) : c'est la seule source de vérité pour appeler le moteur
     et sérialiser un AskResult. On ne la réécrit pas (elle contient des subtilités
     correctes : claim de contrôle de secours, garde `pertinence_non_garantie`).
   - Par-dessus ce JSON réel, on ajoute UNIQUEMENT la couche de présentation
-    (webapp/presentation.py) : score 0-100 + bande de couleur par claim et par intention.
+    (demarche/etape_2_front/presentation.py) : score 0-100 + bande de couleur par claim et par intention.
 
 Endpoints :
-  GET  /                → sert le front (webapp/static/index.html)
+  GET  /                → sert le front (demarche/etape_2_front/static/index.html)
   GET  /static/<f>      → sert css/js
   POST /resolve         → détection de route + candidats UID (identique à ui/)
   POST /ask             → pipeline réel + enrichissement score/couleur
 
-Lancement :  python -m webapp.server    puis http://localhost:8770
+Lancement :  python -m demarche.etape_2_front.server    puis http://localhost:8770
 Nécessite MISTRAL_API_KEY dans .env (sinon l'UI affiche « moteur non connecté »).
 """
 from __future__ import annotations
@@ -31,7 +31,13 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-WORKSPACE = Path(__file__).resolve().parents[1]
+# Racine du dépôt = le premier parent contenant pyproject.toml. Robuste quelle
+# que soit la profondeur d'imbrication (ce fichier vit sous demarche/etape_2_front/).
+WORKSPACE = Path(__file__).resolve()
+for _parent in WORKSPACE.parents:
+    if (_parent / "pyproject.toml").exists():
+        WORKSPACE = _parent
+        break
 # Le moteur vit dans src/ ; ui/ est un package de voisinage qu'on réutilise.
 for p in (str(WORKSPACE / "src"), str(WORKSPACE)):
     if p not in sys.path:
@@ -49,7 +55,7 @@ if _env_path.exists():
 # Réutilisation directe du démonstrateur historique (source de vérité moteur).
 from ui.server import _run_pipeline, detect_route, resolve_parlement_uid  # noqa: E402
 
-from webapp import presentation  # noqa: E402
+from demarche.etape_2_front import presentation  # noqa: E402
 
 STATIC_DIR = Path(__file__).parent / "static"
 

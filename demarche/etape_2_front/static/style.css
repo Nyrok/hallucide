@@ -3,7 +3,7 @@
    aucune police ni asset externe : tout est inline/système pour rester portable
    et fonctionner hors-ligne).
 
-   Repères de couleur des scores (voir webapp/presentation.py) :
+   Repères de couleur des scores (voir demarche/etape_2_front/presentation.py) :
      .band-verifie  -> vert   (AUTHENTIFIÉ)
      .band-trace    -> bleu   (DONNÉE_TRACÉE)
      .band-prudence -> orange (INTERPRÉTATION / CITÉ_NON_OPPOSABLE / bloqué)

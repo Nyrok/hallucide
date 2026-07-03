@@ -5,7 +5,7 @@
 > moteur** (vérifiée en lisant le code, pas supposée), pas une intention.
 >
 > Écrit la nuit du 3→4 juillet 2026 en autonomie. Le moteur n'a **pas** été modifié
-> (voir §7 « Ce qui a été touché »). Tout ce qui est ajouté vit dans `webapp/`.
+> (voir §7 « Ce qui a été touché »). Tout ce qui est ajouté vit dans `demarche/etape_2_front/`.
 
 ---
 
@@ -178,9 +178,9 @@ Les trois `compliance_status` possibles (`audit.py`) :
 - `BLOCKED` : des claims produits mais la vérification a échoué.
 - `NO_ANSWER` : aucun claim produit.
 
-> **Conséquence concrète** pour la couche d'affichage (`webapp/`) : la fonction de
+> **Conséquence concrète** pour la couche d'affichage (`demarche/etape_2_front/`) : la fonction de
 > score doit lire le **statut du claim** ET le **compliance_status** (pour couvrir
-> `NO_ANSWER`). C'est ce qui est fait dans `webapp/presentation.py`.
+> `NO_ANSWER`). C'est ce qui est fait dans `demarche/etape_2_front/presentation.py`.
 
 ---
 
@@ -225,7 +225,7 @@ Aucune ligne de `src/sentinel_guard/` n'a changé.
    `175 passed`).
 3. Le serveur existant `ui/server.py` **fait déjà** l'appel au moteur et la
    sérialisation JSON d'un `AskResult` (routes `/ask` et `/resolve`). La nouvelle
-   couche `webapp/` **réutilise cette logique éprouvée** plutôt que de la réécrire
+   couche `demarche/etape_2_front/` **réutilise cette logique éprouvée** plutôt que de la réécrire
    (elle contient des subtilités correctes : claim de contrôle de secours,
    garde `pertinence_non_garantie`).
 
@@ -244,6 +244,6 @@ python -m pytest -q          # attendu : 175 passed
 # Démo moteur historique (nécessite MISTRAL_API_KEY dans .env) :
 python -m ui.server          # http://localhost:8765
 
-# Nouvelle interface de chat futuriste (voir webapp/README.md) :
-python -m webapp.server      # http://localhost:8770
+# Nouvelle interface de chat futuriste (voir demarche/etape_2_front/README.md) :
+python -m demarche.etape_2_front.server      # http://localhost:8770
 ```

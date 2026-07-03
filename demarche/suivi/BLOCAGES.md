@@ -12,13 +12,13 @@
 - **État** : `.env` est absent (seulement `.env.example`). Sans `MISTRAL_API_KEY`,
   impossible d'appeler le vrai moteur.
 - **Ce qui est prouvé quand même** : les 175 tests passent ; la couche de score
-  est testée (`python -m webapp.presentation`) ; le backend est testé de bout en
+  est testée (`python -m demarche.etape_2_front.presentation`) ; le backend est testé de bout en
   bout sur un `AskResult` réaliste (enrichissement OK) ; l'endpoint `/ask` renvoie
   correctement « moteur non connecté » sans clé ; `/resolve` détecte les routes.
 - **Ce qui n'est PAS prouvé** : une vraie question posée en direct contre
   Moulineuse + Mistral, de bout en bout dans la nouvelle UI.
 - **Action équipe** : `cp .env.example .env`, coller une `MISTRAL_API_KEY`,
-  lancer `python -m webapp.server`, poser une vraie question (ex. « Que dit
+  lancer `python -m demarche.etape_2_front.server`, poser une vraie question (ex. « Que dit
   l'article 1103 du code civil ? ») et vérifier l'affichage réel.
 
 ### 2. Vérification visuelle du front non faite
@@ -42,7 +42,7 @@
   - (a) étendre `_run_pipeline(message, route, form, model=...)` pour choisir le
     provider — mais cela modifie `ui/server.py` (toléré ? c'est le démonstrateur,
     pas le moteur `src/`) ;
-  - (b) faire construire le `SentinelGuard` directement dans `webapp/server.py`
+  - (b) faire construire le `SentinelGuard` directement dans `demarche/etape_2_front/server.py`
     selon le modèle choisi, au prix d'une petite duplication de la sérialisation.
   - Recommandation : (a), c'est le moins de code et `ui/` n'est pas le moteur.
 
@@ -75,7 +75,7 @@
 - 175 tests vérifiés (le cahier disait 173).
 - `COMPRENDRE.md` (Partie 1) : moteur expliqué, champs réels, statuts, écarts
   cahier/réel, phrase de pitch.
-- `webapp/` (Partie 2) : couche de score `presentation.py` (testée), backend
+- `demarche/etape_2_front/` (Partie 2) : couche de score `presentation.py` (testée), backend
   `server.py` (`/ask` + `/resolve`, réutilise le moteur, « moteur non connecté »
   explicite), front de chat futuriste (`static/`), `README.md`.
 - Moteur `src/sentinel_guard/` et démonstrateur `ui/` : **non modifiés**.

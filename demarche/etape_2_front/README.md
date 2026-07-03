@@ -1,23 +1,24 @@
-# webapp/ — interface de chat futuriste (couche de présentation)
+# demarche/etape_2_front/ — interface de chat futuriste (couche de présentation)
 
 Interface web moderne branchée sur le moteur Sentinel Guard. **Le moteur
 (`src/sentinel_guard/`) et le démonstrateur historique (`ui/`) ne sont pas
 modifiés** : cette couche les *consomme*, elle ne les remplace pas.
 
-> À lire d'abord : [`../COMPRENDRE.md`](../COMPRENDRE.md) (comprendre le moteur).
+> À lire d'abord : [`../docs/partie-1-comprendre/COMPRENDRE.md`](../docs/partie-1-comprendre/COMPRENDRE.md)
+> (comprendre le moteur) · carte générale : [`../docs/README.md`](../docs/README.md).
 
 ## Lancer
 
 ```bash
 # depuis la racine, environnement activé (voir README principal)
-python -m webapp.server        # http://localhost:8770
+python -m demarche.etape_2_front.server        # http://localhost:8770
 ```
 
 - Avec `MISTRAL_API_KEY` dans `.env` → vérification réelle en direct.
 - **Sans** clé → l'interface affiche explicitement « moteur non connecté ».
   Aucun résultat n'est jamais simulé (règle impérative anti-hallucination).
 
-Port configurable : `WEBAPP_PORT=8888 python -m webapp.server`.
+Port configurable : `WEBAPP_PORT=8888 python -m demarche.etape_2_front.server`.
 
 ## Ce que fait cette couche (et ce qu'elle ne fait PAS)
 
@@ -31,14 +32,14 @@ Port configurable : `WEBAPP_PORT=8888 python -m webapp.server`.
 ## Organisation des fichiers
 
 ```
-webapp/
+demarche/etape_2_front/
 ├── README.md          ← ce fichier
 ├── __init__.py
 ├── server.py          ← backend stdlib : GET / (front) + POST /ask + POST /resolve
 │                         réutilise ui/server.py (_run_pipeline, detect_route, resolve_parlement_uid)
 │                         puis ENRICHIT le JSON réel avec les scores (presentation.py)
 ├── presentation.py    ← COUCHE « À NOUS » : statut moteur → score 0-100 + bande de couleur
-│                         (déterministe, testable : `python -m webapp.presentation`)
+│                         (déterministe, testable : `python -m demarche.etape_2_front.presentation`)
 └── static/            ← front (aucune dépendance, aucun asset externe)
     ├── index.html     ← structure : en-tête, fil, saisie, panneau de traçabilité
     ├── style.css      ← design sombre futuriste (dégradés, jauges conic-gradient, bandes de couleur)
