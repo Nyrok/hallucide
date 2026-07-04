@@ -37,7 +37,7 @@ class FakeClient:
 
 def _provider_with_payload(monkeypatch, payload: bytes) -> FileRetrievalProvider:
     provider = FileRetrievalProvider(client=FakeClient("https://example.test/file.csv"))
-    monkeypatch.setattr("sentinel_guard.file_retrieval._download", lambda url: payload)
+    monkeypatch.setattr("sentinel_guard._3_retrieval.file_retrieval._download", lambda url: payload)
     return provider
 
 

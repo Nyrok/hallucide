@@ -1,3 +1,3 @@
-from .human_validation import HumanValidationRegistry
-from .document import DocumentMode
-__all__ = ['HumanValidationRegistry', 'DocumentMode']
+"""Sous-package du pipeline Sentinel Guard. Les symboles sont importés
+par chemin complet (voir sentinel_guard/__init__.py) ; ce fichier ne marque
+que le package."""
