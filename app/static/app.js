@@ -410,20 +410,19 @@ function renderResult(bubble, data) {
     } else {
       prose = proseEl(items);
     }
-    prose.classList.add("hd-hidden");
-    const proseBtn = el("button", "fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-1w",
-      "Afficher la réponse rédigée");
-    proseBtn.type = "button";
-    proseBtn.addEventListener("click", () => {
-      prose.classList.remove("hd-hidden");
-      proseBtn.remove();
-    });
-    bubble.append(proseBtn, prose);
+    // La réponse rédigée est toujours visible, jamais masquable.
+    bubble.append(prose);
 
     bubble.append(summaryEl(items));
 
+    // Liste des sources masquée par défaut, derrière « Afficher le détail ».
+    const detailBtn = el("button", "fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-1w",
+      "Afficher le détail des vérifications");
+    detailBtn.type = "button";
+    bubble.append(detailBtn);
+
     // Accordéons : les 10 premiers visibles, le reste derrière « Voir plus ».
-    const group = el("div", "fr-accordions-group");
+    const group = el("div", "fr-accordions-group hd-hidden");
     const LIMIT = 10;
     items.forEach((it, idx) => {
       const acc = accordionEl(it);
@@ -431,11 +430,18 @@ function renderResult(bubble, data) {
       group.append(acc);
     });
     bubble.append(group);
+    let moreBtn = null;
+    detailBtn.addEventListener("click", () => {
+      group.classList.remove("hd-hidden");
+      if (moreBtn) moreBtn.classList.remove("hd-hidden");
+      detailBtn.remove();
+    });
     if (items.length > LIMIT) {
       // Dévoile 5 lignes de plus à chaque clic.
-      const more = el("button", "fr-btn fr-btn--secondary fr-btn--sm fr-mt-1w",
+      const more = el("button", "fr-btn fr-btn--secondary fr-btn--sm fr-mt-1w hd-hidden",
         `Voir plus (${items.length - LIMIT} autres)`);
       more.type = "button";
+      moreBtn = more;
       more.addEventListener("click", () => {
         const hidden = group.querySelectorAll(".hd-hidden");
         for (let i = 0; i < Math.min(5, hidden.length); i++) hidden[i].classList.remove("hd-hidden");
