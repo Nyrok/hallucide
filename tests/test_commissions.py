@@ -31,16 +31,16 @@ def test_date_seule():
 
 def test_commissions_lists_memberships_with_dates():
     rows = [
-        {"libelle": "Commission des lois", "code_type": "COMPER",
+        {"libelle": "Commission des lois", "code_type": "COMPER", "qualite": "Président",
          "date_debut": "2022-07-12T00:00:00+02:00", "date_fin": "2024-06-01T00:00:00+02:00"},
-        {"libelle": "Commission des finances", "code_type": "COMPER",
+        {"libelle": "Commission des finances", "code_type": "COMPER", "qualite": None,
          "date_debut": "2024-07-07T00:00:00+02:00", "date_fin": None},
     ]
     prov = MoulineuseRetrievalProvider(client=FakeClient(commission_rows=rows))
     p = prov.retrieve(_intent(), RetrievalState(),
                       {"route": "commissions", "acteur_ref": "PA722190"})
-    assert "Commission des lois — du 2022-07-12 au 2024-06-01" in p.text
-    assert "Commission des finances — du 2024-07-07 au en cours" in p.text
+    assert "Commission des lois — Président — du 2022-07-12 au 2024-06-01" in p.text
+    assert "Commission des finances — Membre — du 2024-07-07 au en cours" in p.text   # défaut
     assert p.opposable is False          # acte administratif
     assert p.source_type == "mandat"
     assert p.metadata["nb_commissions"] == 2
@@ -90,7 +90,7 @@ def test_commissions_targeted_question_yes():
     p = prov.retrieve(_intent(), RetrievalState(),
                       {"route": "commissions", "acteur_ref": "PA1", "commission": "affaires sociales"})
     assert p.metadata["reponse"] == "oui"
-    assert p.text == "Commission des affaires sociales — du 2012-02-11 au 2012-02-20"
+    assert p.text == "Commission des affaires sociales — Membre — du 2012-02-11 au 2012-02-20"
     assert p.metadata["nb_total"] == 3   # la liste complète reste en traçabilité
 
 

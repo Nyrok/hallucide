@@ -206,6 +206,7 @@ class MoulineuseRetrievalProvider:
         SELECT DISTINCT
                o.data->>'libelle' AS libelle,
                o.data->>'codeType' AS code_type,
+               m->'infosQualite'->>'libQualiteSex' AS qualite,
                m->>'dateDebut' AS date_debut,
                m->>'dateFin' AS date_fin
         FROM assemblee.acteurs a
@@ -236,9 +237,10 @@ class MoulineuseRetrievalProvider:
             libelle = (r.get("libelle") or "").strip()
             if not libelle:
                 continue
+            qualite = (r.get("qualite") or "Membre").strip()
             debut = _date_seule(r.get("date_debut")) or "?"
             fin = _date_seule(r.get("date_fin")) or "en cours"
-            lignes.append(f"{libelle} — du {debut} au {fin}")
+            lignes.append(f"{libelle} — {qualite} — du {debut} au {fin}")
         lignes = list(dict.fromkeys(lignes))
         if not lignes:
             raise RetrievalError(f"Aucune appartenance à une commission trouvée pour l'acteur {acteur_ref}.")
