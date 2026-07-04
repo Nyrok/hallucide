@@ -206,6 +206,7 @@ class MoulineuseRetrievalProvider:
         SELECT DISTINCT
                o.data->>'libelle' AS libelle,
                o.data->>'codeType' AS code_type,
+               m->'infosQualite'->>'libQualiteSex' AS qualite,
                m->>'dateDebut' AS date_debut,
                m->>'dateFin' AS date_fin
         FROM assemblee.acteurs a
@@ -236,22 +237,44 @@ class MoulineuseRetrievalProvider:
             libelle = (r.get("libelle") or "").strip()
             if not libelle:
                 continue
+            qualite = (r.get("qualite") or "Membre").strip()
             debut = _date_seule(r.get("date_debut")) or "?"
             fin = _date_seule(r.get("date_fin")) or "en cours"
-            lignes.append(f"{libelle} — du {debut} au {fin}")
+            lignes.append(f"{libelle} — {qualite} — du {debut} au {fin}")
         lignes = list(dict.fromkeys(lignes))
         if not lignes:
             raise RetrievalError(f"Aucune appartenance à une commission trouvée pour l'acteur {acteur_ref}.")
+
+        # Question ciblée (« est-ce que X a fait partie de la commission Y ? ») :
+        # on filtre sur la commission nommée et on répond oui (lignes) / non.
+        total = len(lignes)
+        cible = (query.get("commission") or "").strip()
+        reponse = "liste"
+        if cible:
+            cible_norm = cible.lower()
+            filtrees = [l for l in lignes if cible_norm in l.lower()]
+            if filtrees:
+                reponse, affichees = "oui", filtrees
+            else:
+                reponse = "non"
+                affichees = [f"Aucune appartenance à une commission « {cible} » dans les "
+                             f"{total} appartenances officielles de {acteur or acteur_ref}."]
+        else:
+            affichees = lignes
 
         return Passage(
             source_id=str(acteur_ref),
             source_type="mandat",
             opposable=False,  # acte administratif, pas texte normatif (§6ter)
-            text="\n".join(lignes),
+            text="\n".join(affichees),
             metadata={
                 "acteur": acteur or "",
                 "acteur_ref": acteur_ref,
-                "nb_commissions": len(lignes),
+                "nb_commissions": len(affichees),
+                "nb_total": total,
+                "commission_cible": cible or None,
+                "reponse": reponse,
+                "toutes_appartenances": lignes,  # liste complète (traçabilité)
                 "source": "Open data Assemblée nationale (mandats)",
             },
         )
