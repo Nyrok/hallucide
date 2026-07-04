@@ -1,6 +1,6 @@
 # Statut d'implémentation — Sentinel-Guard v4
 
-Dernière mise à jour : voir date du commit. 173 tests passent (`python -m pytest`).
+Dernière mise à jour : voir date du commit. 220 tests passent (`python -m pytest`).
 
 Le delta v3 → v4 (mode document §7ter, piège B5, INV-015/016/017, mesure par mode, types v4) est implémenté — voir la section « Delta v4 » ci-dessous.
 
