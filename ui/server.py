@@ -43,7 +43,10 @@ HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 _QUESTION_NUM_RE = re.compile(r"\b(?:qosd|qe|qg|question(?:\s+orale)?)\D{0,20}?(\d{2,6})\b", re.IGNORECASE)
 # « L. 1232-6 » : préfixe L/R/D avec point et espace optionnels devant le
 # numéro -- sans cette alternative, la capture s'arrêtait à « L. ».
-_ARTICLE_RE = re.compile(r"\barticle\s+((?:[LRD]\.?\s*)?\d[\w.\-]*|[\wÀ-ÿ.\-]+)", re.IGNORECASE)
+# Accepte « article », « articles », « art. » et « art » (abréviations
+# courantes) -- sans quoi « art. 1128 du code civil » repartait en recherche
+# libre, alors que la référence est parfaitement structurée.
+_ARTICLE_RE = re.compile(r"\b(?:articles?|art\.?)\s+((?:[LRD]\.?\s*)?\d[\w.\-]*|[\wÀ-ÿ.\-]+)", re.IGNORECASE)
 # La préposition fait partie du titre officiel (« Code DE LA construction et
 # de l'habitation ») : la retirer cassait le LIKE sur le titre -- on capture
 # tout ce qui suit « code ».
