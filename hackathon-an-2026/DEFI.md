@@ -4,19 +4,19 @@
 IA et Hallucination
 
 ### Description courte
-Hallucide vérifie les réponses d'une IA générative contre les sources officielles du Parlement. Chaque affirmation est confrontée mot pour mot au passage source et affichée annotée : vérifiée, tracée, prudence ou risque.
+Les IA génératives inventent des faits avec aplomb, jusqu'à leurs propres justifications. En contexte institutionnel, impossible de distinguer une information vérifiée d'un contenu généré. Hallucide répond à ce problème : chaque affirmation est confrontée mot pour mot à la source officielle avant d'être affichée.
 
 ### Porteur
 Hamza Konte
 
 ### Description longue
-Les IA génératives produisent des réponses inexactes ou non sourcées, et hallucinent jusqu'à leurs propres justifications. En contexte institutionnel, distinguer une information vérifiée d'un contenu généré est difficile.
+Le problème. Les IA génératives produisent des réponses inexactes ou non sourcées, et hallucinent jusqu'à leurs propres justifications : le modèle invente une date, un vote, un mandat, puis fabrique une explication convaincante pour le défendre. Plus la réponse est fluide, plus elle inspire confiance, et c'est précisément ce qui la rend dangereuse. En contexte institutionnel (députés, agents publics, citoyens), distinguer une information vérifiée d'un contenu généré est aujourd'hui impossible à l'œil nu. Une erreur reprise dans une note, une question écrite ou un article engage la responsabilité de son auteur ; l'illusion de fiabilité est le cœur du danger, pas l'erreur elle-même.
 
-Hallucide est une couche de confiance entre le modèle et l'utilisateur. La réponse du modèle est interceptée avant affichage, découpée en affirmations élémentaires, puis chaque affirmation est confrontée à l'open data officiel : articles de code consolidés, questions parlementaires, mandats et commissions des députés, données tabulaires data.gouv.fr. La réponse n'est affichée qu'annotée. Ce que le système ne peut pas sourcer, il le signale au lieu de le présenter comme un fait.
+Le défi consiste donc à ne jamais laisser une affirmation non vérifiée se présenter comme un fait, sans pour autant priver l'utilisateur de la puissance des modèles génératifs.
+
+La solution. Hallucide est une couche de confiance entre le modèle et l'utilisateur. La réponse est interceptée avant affichage, découpée en affirmations élémentaires, puis chaque affirmation est confrontée à l'open data officiel : articles de code consolidés, questions parlementaires, mandats et commissions des députés, données tabulaires data.gouv.fr. La réponse n'est affichée qu'annotée, affirmation par affirmation, avec sa source datée. Ce que le système ne peut pas sourcer, il le signale au lieu de le présenter comme un fait.
 
 Le verdict ne vient jamais du modèle : un pipeline déterministe (Sentinel Guard) vérifie le verbatim, applique un plancher de risque incontournable, exige une décision humaine pour tout résultat à risque élevé, et journalise chaque étape dans un journal de conformité rejouable. Le modèle de décomposition est interchangeable (Claude, Mistral, Gemini) ; aucun ne juge sa propre fidélité.
-
-L'interface est un chat au Système de Design de l'État : prose annotée par statut, indice de confiance global, et pour chaque affirmation sa source datée et sa traçabilité complète.
 
 ### Image principale
 ![Image principale](images/cover.png)
