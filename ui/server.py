@@ -185,7 +185,8 @@ def _build_query(route: str, form: dict) -> dict:
         return {"route": "parlement_question", "uid": form.get("uid", "")}
     if route == "texte_libre":
         raw_query = form.get("query", "").strip().strip("\"“”«»").strip()
-        return {"route": "texte_libre", "query": raw_query}
+        sort = form.get("sort", "pertinence")
+        return {"route": "texte_libre", "query": raw_query, "sort": sort}
     if route == "donnee":
         return {
             "dataset_id": form.get("dataset_id", ""),

@@ -25,6 +25,12 @@
           <option value="mistral">Mistral</option>
           <option value="gemini">Gemini</option>
         </select>
+        <!-- Tri des candidats en recherche libre : pertinence (reranking
+             lexical déterministe) ou date (le plus récent d'abord). -->
+        <select id="sort" class="model-select" title="Tri des résultats (recherche libre)">
+          <option value="pertinence" selected>Plus pertinent</option>
+          <option value="recent">Plus récent</option>
+        </select>
       </div>
     </header>
 

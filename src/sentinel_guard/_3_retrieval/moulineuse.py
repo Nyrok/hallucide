@@ -5,10 +5,59 @@ from typing import Any
 
 from sentinel_guard.core_types.exceptions import RetrievalError
 from sentinel_guard._3_retrieval.mcp_client import McpToolClient
+from sentinel_guard._4_verification.semantic_similarity import similarity_score
 from sentinel_guard._4_verification.slot_provenance import check_slot_provenance
 from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
 
 DEFAULT_MOULINEUSE_URL = "https://mcp.code4code.eu/mcp"
+
+# En dessous de cet écart de score entre les deux meilleurs candidats plein
+# texte, la sélection est jugée ambiguë (quasi-égalité) et élève le risque.
+# Au-dessus, un candidat gagne nettement : pas d'ambiguïté à signaler.
+_RERANK_AMBIGUITY_MARGIN = 0.08
+
+
+def _hit_title(hit: dict[str, Any]) -> str:
+    return (hit.get("document") or {}).get("autocompletion") or ""
+
+
+def _hit_date(hit: dict[str, Any]) -> str | None:
+    """Meilleure date disponible sur un hit (clé contenant 'date'), ou None.
+    Défensif : le schéma exact de search_legal_texts n'est pas garanti."""
+    document = hit.get("document") or {}
+    for key, value in document.items():
+        if "date" in key.lower() and isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _rerank_hits(
+    hits: list[dict[str, Any]], search_query: str, sort: str
+) -> tuple[list[dict[str, Any]], bool]:
+    """Réordonne les candidats plein texte de façon DÉTERMINISTE.
+
+    - sort="recent" : tri par date décroissante si au moins une date existe
+      (sinon repli sur la pertinence). Un tri explicite par date n'est pas
+      une sélection ambiguë de pertinence -> ambigu=False.
+    - sort="pertinence" (défaut) : reclassement lexical par proximité du titre
+      à la requête (similarity_score, aucun modèle). Ambigu seulement si les
+      deux meilleurs sont à égalité serrée (< marge).
+
+    Renvoie (hits_ordonnés, selection_ambiguous).
+    """
+    if not hits:
+        return hits, False
+
+    if sort == "recent" and any(_hit_date(h) for h in hits):
+        ordered = sorted(hits, key=lambda h: _hit_date(h) or "", reverse=True)
+        return ordered, False
+
+    scored = sorted(hits, key=lambda h: similarity_score(_hit_title(h), search_query), reverse=True)
+    if len(scored) < 2:
+        return scored, False
+    top = similarity_score(_hit_title(scored[0]), search_query)
+    second = similarity_score(_hit_title(scored[1]), search_query)
+    return scored, (top - second) < _RERANK_AMBIGUITY_MARGIN
 
 # §6ter: opposability is derived deterministically from document class / état,
 # never from the model. A code article still in force is the clearest case.
@@ -271,7 +320,11 @@ class MoulineuseRetrievalProvider:
         if not hits:
             raise RetrievalError(f"No candidate found for free-text query '{search_query}'.")
 
-        best = hits[0]
+        # Reranking déterministe : on ne prend plus hits[0] à l'aveugle. Selon
+        # `sort`, on classe par pertinence lexicale (défaut) ou par date.
+        sort = query.get("sort", "pertinence")
+        ordered, selection_ambiguous = _rerank_hits(hits, search_query, sort)
+        best = ordered[0]
         document = best.get("document", {})
         title = document.get("autocompletion")
         if not title:
@@ -292,9 +345,11 @@ class MoulineuseRetrievalProvider:
                 "page_path": document.get("page_path"),
                 "badge": document.get("badge"),
                 "candidate_count": len(hits),
-                # hits[0] parmi plusieurs résultats = sélection silencieuse,
-                # même signal que la route code_article (piège A3 variante).
-                "selection_ambiguous": len(hits) > 1,
+                "sort": sort,
+                # Après reranking : ambigu seulement si le meilleur candidat ne
+                # se détache pas nettement du second (quasi-égalité). Un gagnant
+                # net n'est plus signalé comme sélection silencieuse.
+                "selection_ambiguous": selection_ambiguous,
             },
         )
 
