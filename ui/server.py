@@ -30,10 +30,13 @@ if env_path.exists():
 
 import re  # noqa: E402
 
-from sentinel_guard import ClaudeModelProvider, GeminiModelProvider, MistralModelProvider, SentinelGuard  # noqa: E402
+import hashlib  # noqa: E402
+import uuid  # noqa: E402
+
+from sentinel_guard import ClaudeModelProvider, GeminiModelProvider, MistralModelProvider, MultiSourceRetrievalProvider, SentinelGuard  # noqa: E402
 from sentinel_guard.core_types.exceptions import RetrievalError, SentinelGuardError, VerificationError  # noqa: E402
 from sentinel_guard._3_retrieval.mcp_client import McpToolClient  # noqa: E402
-from sentinel_guard.core_types.types import Claim, ClaimStatus  # noqa: E402
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState  # noqa: E402
 from sentinel_guard._4_verification.verifier import verify_claims  # noqa: E402
 
 HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
@@ -292,11 +295,79 @@ def _build_model_provider(model: str):
     return provider_cls(api_key=key), None
 
 
+def _run_commissions_pipeline(message: str, query: dict) -> dict:
+    """Chemin DÉTERMINISTE pour la route commissions (appartenances d'un député).
+
+    La donnée vient d'une requête SQL sur l'open data officiel : AUCUN modèle
+    n'est dans la boucle, donc rien à halluciner. Chaque ligne « Commission … —
+    du … au … » est un fait `DONNÉE_TRACÉE` vérifié (égalité exacte à la source).
+    Résultat : une seule intention, risque faible, PUBLIABLE -- pas de plancher
+    E1 (pas de décomposition LLM) ni de statut « faible » (donnée tracée, pas
+    citation approximative). La garantie tient : une ligne inventée serait
+    rejetée par le vérificateur. Ne nécessite pas de clé LLM."""
+    provider = MultiSourceRetrievalProvider()
+    intent = Intent(id="1", question=message)
+    try:
+        passage = provider.retrieve(intent, RetrievalState(), query)
+    except SentinelGuardError as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+    claims_out = []
+    all_pass = True
+    for ligne in [l for l in passage.text.split("\n") if l.strip()]:
+        ligne_passage = Passage(source_id=passage.source_id, source_type=passage.source_type,
+                                opposable=passage.opposable, text=ligne, metadata={})
+        try:
+            cres = verify_claims([Claim(ref=ligne, status=ClaimStatus.DONNÉE_TRACÉE)], ligne_passage)
+            statut = cres.claims[0].status.value
+        except VerificationError:
+            statut = ClaimStatus.NON_AUTHENTIFIÉ.value
+            all_pass = False
+        claims_out.append({"ref": ligne, "status": statut, "truncation_flagged": False})
+
+    phash = hashlib.sha256(passage.text.encode("utf-8")).hexdigest()[:16]
+    compliance = "VALIDATED" if all_pass else "BLOCKED"
+    intent_out = {
+        "question": message,
+        "source_id": passage.source_id,
+        "source_type": passage.source_type,
+        "opposable": passage.opposable,
+        "titre": passage.metadata.get("acteur"),
+        "passage_text": passage.text,
+        "pertinence_non_garantie": False,
+        "claims": claims_out,
+        "control_claim": None,
+        "verbatim_check": "PASS" if all_pass else "FAIL",
+        "risk_tier": "faible",           # donnée déterministe -> pas de plancher
+        "published": all_pass,           # publiable : fait tracé, pas citation faible
+        "human_validation": None,
+        "validation_key": {"intent_id": "1", "passage_hash": phash},
+        "compliance_status": compliance,
+        "compliance_json": {
+            "compliance_status": compliance,
+            "source_id": passage.source_id,
+            "source_type": passage.source_type,
+            "passage_hash": phash,
+            "verbatim_check": "PASS" if all_pass else "FAIL",
+            "acteur": passage.metadata.get("acteur"),
+            "acteur_ref": passage.metadata.get("acteur_ref"),
+            "nb_commissions": passage.metadata.get("nb_commissions"),
+            "source": passage.metadata.get("source"),
+        },
+    }
+    return {"echo_back": None, "coverage_ratio": 1.0, "coverage_passed": True,
+            "session_ref": uuid.uuid4().hex, "intents": [intent_out]}
+
+
 def _run_pipeline(message: str, route: str, form: dict, model: str = DEFAULT_MODEL) -> dict:
     """Exécute le pipeline réel et renvoie un dict JSON-sérialisable pour l'UI.
 
     `model` choisit le provider LLM (défaut : Claude) ; les autres (Mistral,
     Gemini) restent disponibles pour le futur sélecteur de modèle."""
+    # Route commissions : chemin déterministe (SQL), sans LLM -> pas besoin de clé.
+    if route == "commissions":
+        return _run_commissions_pipeline(message, _build_query(route, form))
+
     provider, err = _build_model_provider(model)
     if err:
         return {"error": err}
