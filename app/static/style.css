@@ -90,9 +90,9 @@ body { margin: 0; }
 .fr-accordion.hd-claim--prudence { box-shadow: inset .25rem 0 0 0 #B34000; }
 .fr-accordion.hd-claim--risque   { box-shadow: inset .25rem 0 0 0 #CE0500; }
 .fr-accordion__btn .fr-badge { margin-right: .75rem; flex: 0 0 auto; }
-/* Sans le JS DSFR, .fr-collapse est repliée par défaut ; .hd-open la déplie. */
-.hd-acc .fr-collapse { display: none; padding: 0 1rem; }
-.hd-acc .fr-collapse.hd-open { display: block; }
+/* Corps d'accordéon maison (fr-collapse DSFR impose max-height:0 sans son JS). */
+.hd-acc__body { display: none; padding: 0 1rem 0.5rem; }
+.hd-acc__body.hd-open { display: block; }
 
 .hd-claim__meta { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
 .hd-detail__key { display: inline-block; min-width: 5.5rem; font-size: .75rem;

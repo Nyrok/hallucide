@@ -248,7 +248,7 @@ function accordionEl(it) {
   title.append(btn);
   sec.append(title);
 
-  const body = el("div", "fr-collapse");
+  const body = el("div", "hd-acc__body");
   body.id = collapseId;
 
   if (control) {
