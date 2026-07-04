@@ -168,7 +168,7 @@ def score_for_intent(
     return score_for_claim(weakest, risk_tier, published)
 
 
-# --- Auto-test rapide (exécuter : python -m demarche.etape_2_front.presentation) --------------
+# --- Auto-test rapide (exécuter : python -m app.presentation) --------------
 if __name__ == "__main__":
     checks = [
         # (statut, risk, published) -> (score attendu, bande attendue)

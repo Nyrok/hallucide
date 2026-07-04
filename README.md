@@ -1,69 +1,53 @@
-# Sentinel Guard
+# Hallucide
 
-Orchestrateur de gouvernance pour la fidélité documentaire (spec v4) : un pipeline déterministe qui décompose une question, récupère des passages depuis des sources officielles réelles, et vérifie chaque citation mot pour mot avant publication — sans jamais faire confiance au LLM pour juger de sa propre fidélité. Le **mode document** (v4) étend la garantie aux notes, synthèses et amendements : un document est une liste de claims vérifiés un à un, jamais un « document vérifié » en bloc.
+Hallucide vérifie les réponses d'une IA générative contre les sources officielles.
+La réponse est découpée en affirmations élémentaires ; chaque affirmation est
+confrontée mot pour mot au passage officiel récupéré (open data du Parlement,
+codes consolidés, data.gouv.fr). L'utilisateur ne reçoit jamais une affirmation
+non vérifiée présentée comme un fait : le verdict vient de la source, jamais du modèle.
 
-173 tests, exemples exécutables + démonstrateur web. Statut détaillé section par section : voir `STATUS.md` ; spécification : `sentinel-guard-spec-v4.md`.
+Le moteur de vérification s'appelle Sentinel Guard (`src/`). C'est un pipeline
+déterministe : décomposition de la question, récupération des passages officiels,
+vérification verbatim, plancher de risque, validation humaine, journal d'audit.
+Spécification : `docs/spec-v4.md`. Statut d'implémentation : `docs/STATUS.md`.
 
-> 🗺️ **Travaux de l'équipe (détection d'hallucination, chat futuriste)** : tout est rangé par étapes dans [`demarche/`](demarche/README.md) — comprendre le moteur (`demarche/etape_1_comprendre/COMPRENDRE.md`), le nouveau front (`demarche/etape_2_front/`), et le suivi (`demarche/suivi/BLOCAGES.md`).
+Projet du hackathon de l'Assemblée nationale 2026, défi « IA et Hallucination » :
+voir `hackathon-an-2026/DEFI.md`.
 
-## Prérequis
-
-- Python 3.11+
-- Une clé API Mistral (obligatoire pour l'UI et la plupart des exemples) et/ou Gemini (`.env`, voir plus bas)
-
-## Installation
+## Démarrage rapide
 
 ```bash
-python -m venv .venv
+make setup             # première fois : crée .venv et installe les dépendances
+cp .env.example .env   # puis coller au moins une clé API (voir Configuration)
+make                   # front de chat sur http://localhost:8770
 ```
 
-Windows (PowerShell) :
-```powershell
-.venv\Scripts\Activate.ps1
-```
-Linux/macOS :
-```bash
-source .venv/bin/activate
-```
-
-Puis, dans l'environnement activé :
-```bash
-python -m pip install -e .[test]
-```
+`make help` liste les autres cibles (`test`, `ui`, `stop`, `clean`).
 
 ## Configuration (`.env`)
 
-Copier le template et renseigner au moins `MISTRAL_API_KEY` :
+Au moins une clé parmi :
 
-```bash
-cp .env.example .env    # Windows: Copy-Item .env.example .env
+| Variable | Fournisseur |
+|---|---|
+| `ANTHROPIC_API_KEY` | Claude, modèle par défaut du front |
+| `MISTRAL_API_KEY` | Mistral |
+| `GEMINI_API_KEY` | Gemini |
+
+Sans clé, l'interface affiche « moteur non connecté ». Rien n'est simulé.
+`.env` n'est jamais versionné : ne jamais committer de vraie clé.
+
+## Arborescence
+
 ```
-
-```
-MISTRAL_API_KEY=sk-...
-GEMINI_API_KEY=...      # optionnelle, pour les exemples/tests Gemini
-```
-
-`.env` n'est jamais versionné (voir `.gitignore`) — ne jamais committer de vraie clé.
-
-## Démarrage du serveur / démonstrateur web
-
-Le serveur UI (`ui/server.py`) lit `.env` à la racine du projet, décompose la question via Mistral, interroge les sources réelles (Moulineuse/data.gouv), vérifie chaque claim, puis sert le résultat sur une page web locale.
-
-```bash
-python -m ui.server
-```
-
-Puis ouvrir **http://localhost:8765** dans un navigateur.
-
-- Saisir une question, ou cliquer « 🔎 Détecter la source automatiquement » pour laisser le système proposer la route (article de code / question parlementaire / donnée chiffrée / recherche libre) et résoudre l'UID si besoin.
-- Chaque intention affiche un statut coloré (`AUTHENTIFIÉ` / `CITÉ_NON_OPPOSABLE` / `NON_AUTHENTIFIÉ` / `INTERPRÉTATION` / `DONNÉE_TRACÉE` / `NO_ANSWER`) et le journal de conformité rejouable (§8).
-- **Marquage « intervention humaine requise » (§4 étape 9)** : tout résultat à risque élevé porte un marquage visuel explicite (badge 🧑‍⚖️ + motifs possibles + clé de validation `intent_id`/`passage_hash`) et reste « NON PUBLIABLE en l'état ». La décision d'approbation/rejet ne se prend pas dans cette page : elle relève du circuit de validation de l'institution, via le `HumanValidationRegistry` du cœur.
-- Arrêt : `Ctrl+C` dans le terminal où le serveur tourne.
-
-Si le port 8765 est déjà occupé (serveur précédent non arrêté), le retrouver et l'arrêter avant de relancer :
-```powershell
-Get-NetTCPConnection -LocalPort 8765 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+app/                front de chat DSFR + backend HTTP (python -m app.server)
+src/                moteur Sentinel Guard, rangé par étape du pipeline
+tests/              pytest (make test)
+ui/                 démonstrateur historique (python -m ui.server, port 8765)
+mock/               maquette statique DSFR de référence
+examples/           scripts exécutables par fonctionnalité du moteur
+docs/               spec v4, statut, design, docs moteur
+hackathon-an-2026/  fiche défi du hackathon
 ```
 
 ## Architecture
@@ -73,54 +57,61 @@ Client → SentinelGuard.ask() → Orchestrator (décompose, récupère, vérifi
               ├── MultiSourceRetrievalProvider
               │     ├── MoulineuseRetrievalProvider  (normatif/parlementaire, MCP réel)
               │     ├── DataGouvRetrievalProvider    (donnée tabulaire, MCP réel)
-              │     └── FileRetrievalProvider        (fichier CSV/ZIP non-tabulaire)
-              ├── verifier.py        (contrôle verbatim déterministe, §7)
-              ├── triage.py          (plancher de risque, §2)
+              │     └── FileRetrievalProvider        (fichier CSV/ZIP non tabulaire)
+              ├── verifier.py         (contrôle verbatim déterministe, §7)
+              ├── triage.py           (plancher de risque, §2)
               ├── human_validation.py (validation humaine, §4 étape 9)
-              └── SovereignLogStore  (journaux cloisonnés conformité/accès, §13.4)
+              └── SovereignLogStore   (journaux cloisonnés conformité/accès, §13.4)
 ```
 
 ## Sources réelles branchées
 
-- **Moulineuse** (`mcp.code4code.eu`) : articles de code consolidés (route SQL multi-étapes), articles parlementaires pastillés, questions parlementaires (QE/QOSD/QG), recherche plein texte avec repli "pertinence non garantie", multi-saut réel via les renvois `LIENS`.
-- **data.gouv.fr** (`mcp.data.gouv.fr`) : données chiffrées tracées via l'API tabulaire (dataset → ressource → cellule filtrée), statut `DONNÉE_TRACÉE`.
-- **Fichiers CSV/ZIP** téléchargés directement pour les ressources data.gouv non indexées par l'API tabulaire (couvre l'INSEE) — détection défensive du format, adressage de cellule par filtres multi-colonnes.
-- **Gemini** (`generativelanguage.googleapis.com`) et **Mistral** (`api.mistral.ai`) : LLM réels pour la décomposition et la génération de claims.
-
-Toutes vérifiées en conditions réelles, pas seulement en mocks (voir `examples/`).
+- Moulineuse (`mcp.code4code.eu`) : articles de code consolidés, articles
+  parlementaires, questions parlementaires (QE/QOSD/QG), commissions et mandats,
+  recherche plein texte avec repli « pertinence non garantie », multi-saut réel.
+- data.gouv.fr (`mcp.data.gouv.fr`) : données chiffrées tracées à la cellule
+  exacte, statut `DONNÉE_TRACÉE`.
+- Fichiers CSV/ZIP téléchargés directement pour les ressources non indexées par
+  l'API tabulaire (couvre l'INSEE).
+- Claude, Mistral et Gemini : LLM réels pour la décomposition et la génération
+  de claims. Interchangeables, aucun ne juge sa propre fidélité.
 
 ## Garanties (ce que le code prouve, pas le modèle)
 
-- Une citation publiée `AUTHENTIFIÉ` existe mot pour mot dans la source officielle **opposable** récupérée (§7) — et le vérificateur re-contrôle lui-même le cycle de vie (`etat` ≠ VIGUEUR → jamais `AUTHENTIFIÉ`, défense en profondeur C2).
-- Le plancher de risque ne peut jamais descendre sous `élevé` une fois qu'une condition déterministe est détectée (§2/INV-011) : référence inférée, troncature, pertinence non garantie, couverture insuffisante, claim `INTERPRÉTATION` ou `CITÉ_NON_OPPOSABLE`, sélection ambiguë entre plusieurs candidats, ou query unique partagée entre plusieurs intentions (E1 dégradé).
-- Une `INTERPRÉTATION` doit ancrer **tous** ses marqueurs de négation et **toutes** ses valeurs chiffrées dans la source (ancres dures anti-distorsion B3), en plus du recouvrement lexical ≥60%.
-- L'opposabilité dérive du type de document et de son cycle de vie, jamais d'un flag de requête ni du modèle (INV-010).
-- **Mode document (v4, §7ter)** : un document n'a jamais de statut agrégé — chaque claim garde le sien (INV-015) ; un document en mode production est toujours à risque élevé, une synthèse de source normative aussi (INV-016) ; une synthèse doit couvrir ou déclarer omise chaque unité structurelle segmentée par le code — l'omission silencieuse (piège B5) bloque la publication (INV-017).
-- Une intention à risque élevé n'est jamais publiée sans décision humaine explicite, capturée et journalisée (§4 étape 9).
-- Le journal de conformité ne contient jamais la question posée ni une identité (§13.4) — garde-fou vérifié par assertion, pas par convention.
+- Une citation publiée `AUTHENTIFIÉ` existe mot pour mot dans la source
+  officielle opposable récupérée (§7). Le vérificateur re-contrôle le cycle de
+  vie : un texte abrogé n'est jamais `AUTHENTIFIÉ`.
+- Le plancher de risque ne descend jamais sous « élevé » quand une condition
+  déterministe est détectée (§2/INV-011) : référence inférée, troncature,
+  pertinence non garantie, couverture insuffisante, sélection ambiguë, query
+  partagée entre intentions.
+- Une `INTERPRÉTATION` doit ancrer tous ses marqueurs de négation et toutes ses
+  valeurs chiffrées dans la source, en plus du recouvrement lexical.
+- L'opposabilité dérive du type de document et de son cycle de vie, jamais d'un
+  flag de requête ni du modèle (INV-010).
+- Mode document (v4, §7ter) : jamais de statut agrégé, chaque claim garde le
+  sien (INV-015) ; l'omission silencieuse d'une unité structurelle bloque la
+  publication (INV-017).
+- Une intention à risque élevé n'est jamais publiée sans décision humaine
+  explicite, capturée et journalisée (§4 étape 9).
+- Le journal de conformité ne contient jamais la question posée ni une identité
+  (§13.4), garde-fou vérifié par assertion.
 
 ## Tests
 
 ```bash
-python -m pytest
+make test
 ```
 
-**173 tests automatisés**, dont 16 tests du mode document v4 (`tests/test_document.py` — INV-015/016/017, piège B5, segmentation, mesure par mode ; démo exécutable : `python examples/run_document_mode.py`) et 16 tests de non-régression couvrant la seconde relecture (voir `STATUS.md`, « Relecture 2 ») : plancher de risque sur les statuts faibles (`INTERPRÉTATION`/`CITÉ_NON_OPPOSABLE`), ancres dures négation/chiffres, suppression de `opposable_override`, mode dégradé E1 (query partagée), re-contrôle d'abrogation dans le vérificateur, sélection ambiguë, insensibilité casse/ponctuation de bord, virgule décimale.
-
-### Tests en conditions réelles (démonstrateur, 2026-07-02)
-
-Deux scénarios joués en direct contre les sources réelles (Moulineuse + Mistral), validant la chaîne complète jusqu'à la décision humaine :
-
-| Scénario | Ce qui s'est passé | Verdict |
-|---|---|---|
-| **Prémisse fausse (A2)** — « Teneur de la QOSD n° 0812 sur la fermeture d'une trésorerie, quelle commune ? » (la vraie QOSD 812 porte sur les contrats aidés) | Le système a récupéré le vrai texte officiel, n'a **pas** inventé la commune demandée (`NO_ANSWER`, zéro hallucination), source non opposable + 3 intentions sur 1 requête → risque élevé, panneau de validation humaine sur chaque intention | ✅ conforme — décision attendue : rejet |
-| **N questions → 1 requête (E1)** — « Que dit l'article 1103 du code civil et quelle est la règle de bonne foi ? » | 2 intentions détectées (couverture 100%), la requête unique (art. 1103) a servi les deux : intention 1 correcte (verbatim `AUTHENTIFIÉ`, opposable), intention 2 hors sujet (la bonne foi est à l'art. 1104) mais **bloquée** par le plancher E1 + slot inféré (A3) → validation humaine | ✅ conforme — décisions attendues : approbation (1), rejet (2) |
-
-Le second scénario matérialise le cas que les corrections visaient : un passage authentique, exact et opposable, présenté en réponse à une question à laquelle il ne répond pas — chaque élément est vrai isolément, et c'était publiable automatiquement avant le plancher E1. Le contrôle revient désormais à l'humain.
+220 tests automatisés, dont le mode document v4 (INV-015/016/017, piège B5) et
+les commissions ciblées. Deux scénarios ont aussi été joués en direct contre les
+sources réelles (voir `docs/STATUS.md`) : prémisse fausse sans hallucination
+(`NO_ANSWER`), et passage authentique mais hors sujet bloqué par le plancher E1.
 
 ## Exemples
 
-Scripts exécutables dans `examples/` (certains nécessitent `.env`, voir plus haut ; Moulineuse/data.gouv ne demandent pas de clé) :
+Scripts exécutables dans `examples/`, un par fonctionnalité du moteur
+(Moulineuse et data.gouv ne demandent pas de clé) :
 
 ```bash
 python examples/run_sentinel_guard.py

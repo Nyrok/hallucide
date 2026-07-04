@@ -5,7 +5,7 @@
 > moteur** (vérifiée en lisant le code, pas supposée), pas une intention.
 >
 > Écrit la nuit du 3→4 juillet 2026 en autonomie. Le moteur n'a **pas** été modifié
-> (voir §7 « Ce qui a été touché »). Tout ce qui est ajouté vit dans `demarche/etape_2_front/`.
+> (voir §7 « Ce qui a été touché »). Tout ce qui est ajouté vit dans `app/`.
 
 ---
 
@@ -27,7 +27,7 @@ et administratif français.
 
 ## 2. Rôle de chaque module (`src/sentinel_guard/`)
 
-Source : `STATUS.md`. Une ligne par module.
+Source : `docs/STATUS.md`. Une ligne par module.
 
 | Module | Rôle en une phrase |
 |---|---|
@@ -182,9 +182,9 @@ Les trois `compliance_status` possibles (`audit.py`) :
 - `BLOCKED` : des claims produits mais la vérification a échoué.
 - `NO_ANSWER` : aucun claim produit.
 
-> **Conséquence concrète** pour la couche d'affichage (`demarche/etape_2_front/`) : la fonction de
+> **Conséquence concrète** pour la couche d'affichage (`app/`) : la fonction de
 > score doit lire le **statut du claim** ET le **compliance_status** (pour couvrir
-> `NO_ANSWER`). C'est ce qui est fait dans `demarche/etape_2_front/presentation.py`.
+> `NO_ANSWER`). C'est ce qui est fait dans `app/presentation.py`.
 
 ---
 
@@ -239,7 +239,7 @@ comportement d'origine inchangé, 175 tests d'origine préservés) :
    `175 passed`).
 3. Le serveur existant `ui/server.py` **fait déjà** l'appel au moteur et la
    sérialisation JSON d'un `AskResult` (routes `/ask` et `/resolve`). La nouvelle
-   couche `demarche/etape_2_front/` **réutilise cette logique éprouvée** plutôt que de la réécrire
+   couche `app/` **réutilise cette logique éprouvée** plutôt que de la réécrire
    (elle contient des subtilités correctes : claim de contrôle de secours,
    garde `pertinence_non_garantie`).
 
@@ -258,6 +258,6 @@ python -m pytest -q          # attendu : 175 passed
 # Démo moteur historique (nécessite MISTRAL_API_KEY dans .env) :
 python -m ui.server          # http://localhost:8765
 
-# Nouvelle interface de chat futuriste (voir demarche/etape_2_front/README.md) :
-python -m demarche.etape_2_front.server      # http://localhost:8770
+# Nouvelle interface de chat futuriste (voir app/README.md) :
+python -m app.server      # http://localhost:8770
 ```
