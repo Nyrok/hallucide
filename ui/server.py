@@ -60,7 +60,8 @@ _ORATEUR_RE = re.compile(r"(?:M\.|Mme|monsieur|madame|de|du|par)\s+"
 # capturerait « François Hollande était-il ».
 _MAJ = "A-ZÀ-ÖØ-Þ"
 _MIN = "a-zà-öø-ÿ"
-_NOM_DEPUTE_RE = re.compile(rf"\b([{_MAJ}][{_MIN}'’-]+(?:\s+[{_MAJ}][{_MIN}'’-]+)+)")
+_MOT_NOM = rf"[{_MAJ}][{_MIN}'’]+(?:-[{_MAJ}][{_MIN}'’]+)*"  # gère Braun-Pivet, Saint-Martin
+_NOM_DEPUTE_RE = re.compile(rf"\b({_MOT_NOM}(?:\s+{_MOT_NOM})+)")
 # Commission NOMMÉE (question ciblée) : « la commission des affaires sociales ».
 # Le « commission » SINGULIER + article distingue du listing (« commissionS où »).
 _COMMISSION_CIBLE_RE = re.compile(

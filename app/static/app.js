@@ -144,10 +144,6 @@ function summaryEl(items) {
       `${n} ${BAND_LABELS[band] || band}`));
   });
   detail.append(breakdown);
-  const ok = counts.verifie || 0, bad = counts.risque || 0;
-  let phrase = `${ok} affirmation${ok > 1 ? "s" : ""} sur ${items.length} confirmée${ok > 1 ? "s" : ""} par une source officielle.`;
-  if (bad) phrase += ` <strong>${bad} non authentifiée${bad > 1 ? "s" : ""}</strong>, à ne pas diffuser.`;
-  detail.append(el("p", "fr-text--sm fr-mb-0", phrase));
   wrap.append(detail);
   return wrap;
 }
@@ -264,8 +260,16 @@ function accordionEl(it) {
   const meta = el("div", "hd-claim__meta fr-pb-1w");
   const srcLabel = intent.titre || intent.source_id;
   if (srcLabel) {
-    meta.append(el("span", "fr-tag fr-tag--sm", escapeHtml(srcLabel) +
-      (intent.source_type ? ` (${escapeHtml(intent.source_type)})` : "")));
+    const label = escapeHtml(srcLabel) +
+      (intent.source_type ? ` (${escapeHtml(intent.source_type)})` : "");
+    const url = sourceUrl(intent);
+    if (url) {
+      const a = el("a", "fr-tag fr-tag--sm fr-icon-external-link-line fr-tag--icon-left", label);
+      a.href = url; a.target = "_blank"; a.rel = "noopener";
+      meta.append(a);
+    } else {
+      meta.append(el("span", "fr-tag fr-tag--sm", label));
+    }
     meta.append(el("span", "fr-text--xs",
       intent.opposable ? "Source opposable" : "Source non opposable"));
     if (intent.pertinence_non_garantie) meta.append(el("span", "fr-text--xs", "Pertinence non garantie"));
@@ -283,10 +287,13 @@ function accordionEl(it) {
     body.append(el("p", "fr-badge fr-badge--sm hd-b--prudence fr-mb-1w", "Revue humaine requise, non publiable en l'état"));
   }
 
-  const traceBtn = el("button", "fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-1w", "Traçabilité complète");
-  traceBtn.type = "button";
-  traceBtn.addEventListener("click", () => openTrace(intent, claim));
-  body.append(traceBtn);
+  // Journal de conformité rejouable, replié inline (l'ancien panneau latéral a été retiré).
+  if (intent.compliance_json) {
+    const raw = el("details", "hd-raw fr-mb-1w");
+    raw.append(el("summary", null, "Journal de conformité"));
+    raw.append(el("pre", null, escapeHtml(JSON.stringify(intent.compliance_json, null, 2))));
+    body.append(raw);
+  }
 
   sec.append(body);
 
@@ -299,6 +306,18 @@ function accordionEl(it) {
   });
 
   return sec;
+}
+
+// Lien vers le document officiel correspondant à l'identifiant renvoyé par le MCP.
+// PAxxxx = fiche député Assemblée nationale ; LEGIARTI = article Légifrance ;
+// une URL brute est renvoyée telle quelle. Sinon pas de lien.
+function sourceUrl(intent) {
+  const id = String(intent.source_id || "");
+  if (/^https?:\/\//.test(id)) return id;
+  if (/^PA\d+$/.test(id)) return `https://www.assemblee-nationale.fr/dyn/deputes/${id}`;
+  if (/^LEGIARTI\d+$/.test(id)) return `https://www.legifrance.gouv.fr/codes/article_lc/${id}`;
+  if (/^LEGITEXT\d+$/.test(id)) return `https://www.legifrance.gouv.fr/codes/texte_lc/${id}`;
+  return null;
 }
 
 // --- Rendu d'un résultat de vérification -------------------------------------
@@ -350,78 +369,6 @@ function renderResult(bubble, data) {
     bubble.append(el("p", "fr-text--xs fr-mb-0", "Réf. session : " + escapeHtml(data.session_ref)));
   }
   scrollBottom();
-}
-
-// --- Panneau de traçabilité ---------------------------------------------------
-const tracePanel = $("#trace");
-const traceBody = $("#trace-body");
-$("#trace-close").addEventListener("click", closeTrace);
-function closeTrace() { tracePanel.classList.remove("hd-open"); tracePanel.setAttribute("aria-hidden", "true"); }
-
-function section(title, valueHtml) {
-  const s = el("div");
-  s.append(el("h4", null, title));
-  s.append(el("div", null, valueHtml));
-  return s;
-}
-
-function openTrace(intent, claim) {
-  traceBody.innerHTML = "";
-  $("#trace-title").textContent = claim ? "Traçabilité de l'affirmation" : "Traçabilité de l'intention";
-
-  const score = (claim && claim.score) || intent.score || {};
-  const sc = el("div");
-  sc.append(el("h4", null, "Score de présentation"));
-  sc.append(el("div", null,
-    `<span class="fr-badge fr-badge--sm hd-b--${score.band || "risque"}">${score.score ?? "?"} ${BAND_LABELS[score.band] || score.band || "?"}</span>`));
-  if (score.reason) sc.append(el("p", "fr-text--xs", escapeHtml(score.reason)));
-  sc.append(el("p", "fr-text--xs",
-    "Ce chiffre traduit le statut établi par le moteur. Ce n'est pas une nouvelle vérification."));
-  traceBody.append(sc);
-
-  if (claim) {
-    traceBody.append(section("Affirmation vérifiée",
-      `${escapeHtml(claim.ref)}<br><span class="fr-text--xs">statut moteur : <b>${escapeHtml(claim.status)}</b>` +
-      (claim.verbatim_check ? ` · verbatim : ${escapeHtml(claim.verbatim_check)}` : "") +
-      (claim.truncation_flagged ? " · troncature signalée" : "") + "</span>"));
-  }
-
-  traceBody.append(section("Passage source récupéré (réel, non modifié)",
-    `<div class="hd-source-text">${escapeHtml(intent.passage_text || "—")}</div>`));
-
-  const chip = (k, v) => `<span class="hd-chip">${k} <b>${escapeHtml(v)}</b></span>`;
-  traceBody.append(section("Source",
-    `<div class="hd-kv">` +
-    chip("source_id", intent.source_id || "—") +
-    chip("source_type", intent.source_type || "—") +
-    chip("opposable", intent.opposable ? "oui" : "non") +
-    chip("risque", intent.risk_tier || "—") +
-    chip("compliance", intent.compliance_status || "—") +
-    chip("verbatim", intent.verbatim_check || "—") +
-    (intent.pertinence_non_garantie ? chip("pertinence", "non garantie") : "") +
-    `</div>`));
-
-  if (intent.published === false) {
-    const vk = intent.validation_key || {};
-    traceBody.append(section("Revue humaine requise",
-      `<p class="fr-badge fr-badge--sm hd-b--prudence">Non publiable en l'état</p>` +
-      `<div class="hd-kv fr-mt-1w">` +
-      chip("intent_id", vk.intent_id || "—") +
-      chip("passage_hash", (vk.passage_hash || "").slice(0, 16) + "…") +
-      `</div>` +
-      `<p class="fr-text--xs">La décision d'approbation/rejet se prend hors de cette interface, ` +
-      `via le circuit de validation de l'institution (HumanValidationRegistry).</p>`));
-  }
-
-  if (intent.compliance_json) {
-    const raw = el("details", "hd-raw");
-    raw.append(el("summary", null, "Journal de conformité (JSON rejouable, sans la question ni d'identité)"));
-    raw.append(el("pre", null, escapeHtml(JSON.stringify(intent.compliance_json, null, 2))));
-    traceBody.append(raw);
-  }
-
-  tracePanel.classList.add("hd-open");
-  tracePanel.setAttribute("aria-hidden", "false");
 }
 
 // --- Construction de la requête selon la route ------------------------------
