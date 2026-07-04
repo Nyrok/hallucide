@@ -88,6 +88,10 @@ Question de l'utilisateur
       - reformulation ancrée (négations + chiffres présents, recouvrement ≥60%) → INTERPRÉTATION
       - donnée chiffrée = cellule exacte → DONNÉE_TRACÉE
       - sinon → NON_AUTHENTIFIÉ
+    NB : les checks « négation » et « chiffres » (ancres dures) et l'ancrage
+    lexical ≥60% sont DÉJÀ implémentés et testés (verifier.py:118, :130-134,
+    :149-150). Seule la similarité SÉMANTIQUE par embeddings reste à faire.
+    Détail complet et statut par sous-étape : voir PROCESSUS_FINAL.md.
    │
    ▼
 [4] PLANCHER DE RISQUE  (triage.py)
