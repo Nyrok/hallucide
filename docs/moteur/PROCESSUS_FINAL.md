@@ -1,4 +1,4 @@
-# Processus final — Sentinel Guard
+# Processus final — Hallucide
 
 > Le pipeline complet, étape par étape, avec le **statut réel d'implémentation**
 > vérifié **dans le code source** (pas dans la spec ni la doc). Chaque ✅ renvoie
@@ -34,10 +34,10 @@ Elle se décompose en trois sous-parties, dont **deux sont déjà implémentées
 
 | Sous-partie | Statut | Preuve (code réel) |
 |---|---|---|
-| **Path B — checks logiques : négation** | ✅ implémenté + testé | [`verifier.py:118`](../../src/sentinel_guard/_4_verification/verifier.py#L118), [`:130-134`](../../src/sentinel_guard/_4_verification/verifier.py#L130) (`_hard_anchors_hold`) · test `test_interpretation_with_inverted_negation_is_refused` |
-| **Path B — checks logiques : chiffres** | ✅ implémenté + testé | [`verifier.py:131-132`](../../src/sentinel_guard/_4_verification/verifier.py#L131) · test « 14 jours vs 10 jours » ([`test_verifier.py:263-271`](../../tests/test_verifier.py#L263)) |
-| **Similarité lexicale ≥60%** | ✅ implémenté + testé | [`verifier.py:95`](../../src/sentinel_guard/_4_verification/verifier.py#L95), [`:149-150`](../../src/sentinel_guard/_4_verification/verifier.py#L149) (`overlap ≥ 0.6`) · test `test_unanchored_interpretation_is_refused` |
-| **Path A — proximité de reformulation (déterministe)** | ✅ implémenté + testé (4 juillet) | [`semantic_similarity.py`](../../src/sentinel_guard/_4_verification/semantic_similarity.py) : Jaccard tokens + trigrammes de caractères, sans ML ni API · [`tests/test_semantic_similarity.py`](../../tests/test_semantic_similarity.py) (16 cas) |
+| **Path B — checks logiques : négation** | ✅ implémenté + testé | [`verifier.py:118`](../../src/hallucide/_4_verification/verifier.py#L118), [`:130-134`](../../src/hallucide/_4_verification/verifier.py#L130) (`_hard_anchors_hold`) · test `test_interpretation_with_inverted_negation_is_refused` |
+| **Path B — checks logiques : chiffres** | ✅ implémenté + testé | [`verifier.py:131-132`](../../src/hallucide/_4_verification/verifier.py#L131) · test « 14 jours vs 10 jours » ([`test_verifier.py:263-271`](../../tests/test_verifier.py#L263)) |
+| **Similarité lexicale ≥60%** | ✅ implémenté + testé | [`verifier.py:95`](../../src/hallucide/_4_verification/verifier.py#L95), [`:149-150`](../../src/hallucide/_4_verification/verifier.py#L149) (`overlap ≥ 0.6`) · test `test_unanchored_interpretation_is_refused` |
+| **Path A — proximité de reformulation (déterministe)** | ✅ implémenté + testé (4 juillet) | [`semantic_similarity.py`](../../src/hallucide/_4_verification/semantic_similarity.py) : Jaccard tokens + trigrammes de caractères, sans ML ni API · [`tests/test_semantic_similarity.py`](../../tests/test_semantic_similarity.py) (16 cas) |
 | **Path A — similarité par embeddings (modèle)** | ❌ non retenu | choix assumé : un embedding réintroduit un score flou de modèle. La version déterministe ci-dessus couvre le besoin sans le flou. |
 
 ### Pourquoi le grep `embedding` était vide alors que « Path B » est ✅
@@ -64,7 +64,7 @@ ne rattrape **jamais** un `NON_AUTHENTIFIÉ`, ne touche **jamais** un claim verb
 
 **Branchement (additif, sans modifier le moteur)** : `semantic_floor_conditions(...)`
 renvoie une liste de booléens (un par claim) à passer, par un OU logique, dans le
-paramètre `floor_conditions` **déjà existant** de `SentinelGuard.ask`. Le cœur du
+paramètre `floor_conditions` **déjà existant** de `Hallucide.ask`. Le cœur du
 moteur n'est pas modifié ; les 175 tests d'origine restent verts, et 16 nouveaux
 tests couvrent cette couche.
 
@@ -99,4 +99,4 @@ fabrique pas côté vérificateur.
 Le vérificateur ne fait **pas confiance** aux étapes d'amont : même si la
 récupération marque une source « opposable », si son état n'est pas `VIGUEUR`
 (texte abrogé), elle retombe en `CITÉ_NON_OPPOSABLE` — jamais `AUTHENTIFIÉ`.
-Preuve : [`verifier.py:162-168`](../../src/sentinel_guard/_4_verification/verifier.py#L162) (`_effectively_opposable`) + [`:191`](../../src/sentinel_guard/_4_verification/verifier.py#L191).
+Preuve : [`verifier.py:162-168`](../../src/hallucide/_4_verification/verifier.py#L162) (`_effectively_opposable`) + [`:191`](../../src/hallucide/_4_verification/verifier.py#L191).

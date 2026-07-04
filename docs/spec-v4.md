@@ -1,4 +1,4 @@
-# Spécification Technique : Sentinel-Guard (v4 — orchestrateur agnostique, coutures durcies, mode document)
+# Spécification Technique : Hallucide (v4 — orchestrateur agnostique, coutures durcies, mode document)
 
 > **Journal des modifications v3 → v4** (ne re-vérifier que ces points) :
 > * **§7ter (nouveau)** — **Mode document** : la sortie peut être un document composé
@@ -35,12 +35,12 @@
 
 ## 1. Vue d'ensemble
 
-**Sentinel-Guard** n'est pas une extension de navigateur : c'est un **orchestrateur de gouvernance** qui s'intercale entre le client et le moteur de génération. Il exécute lui-même, **côté serveur**, un contrôle de fidélité documentaire (cf. glossaire §1bis), indépendamment du modèle utilisé.
+**Hallucide** n'est pas une extension de navigateur : c'est un **orchestrateur de gouvernance** qui s'intercale entre le client et le moteur de génération. Il exécute lui-même, **côté serveur**, un contrôle de fidélité documentaire (cf. glossaire §1bis), indépendamment du modèle utilisé.
 
 Le moteur de génération (API d'un fournisseur ou LLM local) est un **composant interchangeable**. La garantie de fidélité repose sur le code de l'orchestrateur, jamais sur la discipline du modèle.
 
 ```text
-Client  ──►  Sentinel-Guard (orchestrateur)  ──►  Moteur de génération (pluggable)
+Client  ──►  Hallucide (orchestrateur)  ──►  Moteur de génération (pluggable)
                     │                                      ▲
                     ├──► Client MCP → Tricoteuses/Moulineuse│
                     └──► Vérificateur déterministe ────────┘
@@ -483,7 +483,7 @@ Pièges regroupés par **endroit où ils vivent dans la réponse**. ✅ verrouil
 
 ---
 
-## 11. Ce que Sentinel-Guard garantit / ne garantit pas
+## 11. Ce que Hallucide garantit / ne garantit pas
 
 **Garantit :** qu'aucune citation littérale publiée comme `AUTHENTIFIÉ` n'est absente de la source officielle opposable récupérée ; qu'une référence inexistante est bloquée ; qu'un verbatim sur source non opposable n'obtient jamais le label d'autorité ; qu'en l'absence de source, le système refuse.
 
@@ -524,7 +524,7 @@ Députés / collaborateurs (postes distants)
         ▼
 Passerelle d'accès + Authentification (identité institutionnelle)
         ▼
-Sentinel-Guard (orchestrateur, multi-tenant)
+Hallucide (orchestrateur, multi-tenant)
    ├── LLM local (GPU on-premise, éventuellement répliqué)
    ├── Client MCP local → corpus officiel indexé
    └── Vérificateur déterministe (verbatim)

@@ -4,10 +4,10 @@ from pathlib import Path
 workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard._3_retrieval.moulineuse import MoulineuseRetrievalProvider
-from sentinel_guard.core_types.types import Intent, RetrievalState
-from sentinel_guard._4_verification.verifier import verify_claims
-from sentinel_guard.core_types.types import Claim, ClaimStatus
+from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider
+from hallucide.core_types.types import Intent, RetrievalState
+from hallucide._4_verification.verifier import verify_claims
+from hallucide.core_types.types import Claim, ClaimStatus
 
 
 def main() -> None:

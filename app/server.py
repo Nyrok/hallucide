@@ -1,6 +1,6 @@
 """Backend de l'interface de chat futuriste (app/).
 
-Rôle : exposer le moteur Sentinel Guard à un front web moderne, SANS toucher au
+Rôle : exposer le moteur Hallucide à un front web moderne, SANS toucher au
 moteur ni au démonstrateur historique (ui/server.py reste le fallback intact).
 
 Choix d'architecture (voir app/README.md) :

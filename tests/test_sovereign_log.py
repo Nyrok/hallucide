@@ -1,15 +1,15 @@
 import pytest
 
-from sentinel_guard import Orchestrator, RiskTier
-from sentinel_guard._7_audit.audit import build_compliance_log
-from sentinel_guard._7_audit.sovereign_log import (
+from hallucide import Orchestrator, RiskTier
+from hallucide._7_audit.audit import build_compliance_log
+from hallucide._7_audit.sovereign_log import (
     NonCorrelationViolation,
     SovereignLogStore,
     assert_compliance_entry_is_anonymous,
     build_access_log_entry,
     generate_session_ref,
 )
-from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
+from hallucide.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
 
 
 class DummyDecomposer:

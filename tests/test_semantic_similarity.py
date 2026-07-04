@@ -1,5 +1,5 @@
-from sentinel_guard.core_types.types import Claim, ClaimStatus, Passage, VerificationResult
-from sentinel_guard._4_verification.semantic_similarity import (
+from hallucide.core_types.types import Claim, ClaimStatus, Passage, VerificationResult
+from hallucide._4_verification.semantic_similarity import (
     DEFAULT_DISTANCE_THRESHOLD,
     any_distant_reformulation,
     is_distant_reformulation,

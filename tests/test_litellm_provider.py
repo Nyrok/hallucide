@@ -3,8 +3,8 @@ import types
 
 import pytest
 
-from sentinel_guard.core_types.exceptions import SentinelGuardError
-from sentinel_guard.llm_providers.litellm_provider import LiteLLMModelProvider
+from hallucide.core_types.exceptions import HallucideError
+from hallucide.llm_providers.litellm_provider import LiteLLMModelProvider
 
 
 def _install_fake_litellm(monkeypatch, response_content: str | None = "result from litellm", raise_error: bool = False):
@@ -27,7 +27,7 @@ def _install_fake_litellm(monkeypatch, response_content: str | None = "result fr
 
 def test_rejects_forced_tool_choice() -> None:
     provider = LiteLLMModelProvider(api_key="test-key")
-    with pytest.raises(SentinelGuardError, match="forced tool calling"):
+    with pytest.raises(HallucideError, match="forced tool calling"):
         provider.generate(messages=[{"role": "system", "content": "foo"}], tools=[], tool_choice="required")
 
 
@@ -54,7 +54,7 @@ def test_raises_when_response_has_no_text(monkeypatch) -> None:
     _install_fake_litellm(monkeypatch, response_content=None)
     provider = LiteLLMModelProvider(api_key="test-key")
 
-    with pytest.raises(SentinelGuardError, match="Unable to extract text"):
+    with pytest.raises(HallucideError, match="Unable to extract text"):
         provider.generate(messages=[{"role": "user", "content": "hello"}], tools=[], tool_choice=None)
 
 
@@ -62,5 +62,5 @@ def test_wraps_underlying_errors(monkeypatch) -> None:
     _install_fake_litellm(monkeypatch, raise_error=True)
     provider = LiteLLMModelProvider(api_key="test-key")
 
-    with pytest.raises(SentinelGuardError, match="LiteLLM error"):
+    with pytest.raises(HallucideError, match="LiteLLM error"):
         provider.generate(messages=[{"role": "user", "content": "hello"}], tools=[], tool_choice=None)

@@ -1,5 +1,5 @@
 """Interface graphique simple (stdlib http.server, zéro dépendance web) pour
-visualiser le pipeline Sentinel-Guard en direct : question -> décomposition
+visualiser le pipeline Hallucide en direct : question -> décomposition
 (Mistral) -> récupération réelle (Moulineuse/data.gouv) -> vérification
 déterministe -> statut coloré + journal de conformité.
 
@@ -33,11 +33,11 @@ import re  # noqa: E402
 import hashlib  # noqa: E402
 import uuid  # noqa: E402
 
-from sentinel_guard import ClaudeModelProvider, GeminiModelProvider, MistralModelProvider, MultiSourceRetrievalProvider, SentinelGuard  # noqa: E402
-from sentinel_guard.core_types.exceptions import RetrievalError, SentinelGuardError, VerificationError  # noqa: E402
-from sentinel_guard._3_retrieval.mcp_client import McpToolClient  # noqa: E402
-from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState  # noqa: E402
-from sentinel_guard._4_verification.verifier import verify_claims  # noqa: E402
+from hallucide import ClaudeModelProvider, GeminiModelProvider, MistralModelProvider, MultiSourceRetrievalProvider, Hallucide  # noqa: E402
+from hallucide.core_types.exceptions import RetrievalError, HallucideError, VerificationError  # noqa: E402
+from hallucide._3_retrieval.mcp_client import McpToolClient  # noqa: E402
+from hallucide.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState  # noqa: E402
+from hallucide._4_verification.verifier import verify_claims  # noqa: E402
 
 HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 
@@ -337,7 +337,7 @@ def _run_commissions_pipeline(message: str, query: dict) -> dict:
     intent = Intent(id="1", question=message)
     try:
         passage = provider.retrieve(intent, RetrievalState(), query)
-    except SentinelGuardError as exc:
+    except HallucideError as exc:
         return {"error": f"{type(exc).__name__}: {exc}"}
 
     claims_out = []
@@ -400,12 +400,12 @@ def _run_pipeline(message: str, route: str, form: dict, model: str = DEFAULT_MOD
     if err:
         return {"error": err}
 
-    guard = SentinelGuard(model_provider=provider)
+    guard = Hallucide(model_provider=provider)
     query = _build_query(route, form)
 
     try:
         result = guard.ask(message=message, query=query)
-    except SentinelGuardError as exc:
+    except HallucideError as exc:
         return {"error": f"{type(exc).__name__}: {exc}"}
 
     intents_out = []
@@ -527,7 +527,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     port = 8765
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"Sentinel-Guard UI -> http://localhost:{port}  (Ctrl+C pour arrêter)")
+    print(f"Hallucide UI -> http://localhost:{port}  (Ctrl+C pour arrêter)")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -38,7 +38,7 @@ clean:  ## Nettoie caches et artefacts (garde .venv)
 	@echo "Nettoyé"
 
 help:  ## Affiche cette aide
-	@echo "Sentinel Guard — commandes make :"
+	@echo "Hallucide — commandes make :"
 	@echo "  make          → lance la démo (front de chat, port 8770)"
 	@echo "  make test     → 195 tests"
 	@echo "  make ui       → démonstrateur historique (port 8765)"

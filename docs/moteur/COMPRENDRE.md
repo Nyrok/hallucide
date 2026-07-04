@@ -11,7 +11,7 @@
 
 ## 1. Le projet en 3 phrases
 
-**Sentinel Guard** est un moteur qui répond à une question en ne s'appuyant que sur
+**Hallucide** est un moteur qui répond à une question en ne s'appuyant que sur
 des **sources officielles réelles** (textes de loi, questions parlementaires, données
 publiques), et qui **vérifie chaque affirmation mot pour mot** contre la source avant
 de la publier. Il ne fait **jamais confiance au LLM** pour juger de sa propre
@@ -25,7 +25,7 @@ et administratif français.
 
 ---
 
-## 2. Rôle de chaque module (`src/sentinel_guard/`)
+## 2. Rôle de chaque module (`src/hallucide/`)
 
 Source : `docs/STATUS.md`. Une ligne par module.
 
@@ -52,7 +52,7 @@ Source : `docs/STATUS.md`. Une ligne par module.
 | `human_validation.py` | Registre des **décisions humaines** (approbation/rejet) sur les cas à risque. |
 | `audit.py` | **Journal de conformité** rejouable (hashes de passages), sans la question ni d'identité. |
 | `sovereign_log.py` | Cloisonne les journaux (conformité vs accès) — mode souverain. |
-| `core.py` | La **façade** `SentinelGuard.ask(...)` qui câble tout le reste. |
+| `core.py` | La **façade** `Hallucide.ask(...)` qui câble tout le reste. |
 | `measurement.py` / `trap_dataset.py` | Banc de mesure (taux de blocage, sur-refus) sur des cas pièges. |
 | `calibration.py` | Kappa de Cohen entre annotateurs humains (qualité du jeu de référence). |
 | `exceptions.py` | Les exceptions du moteur. |
@@ -120,9 +120,9 @@ AskResult
 Point d'entrée unique (`core.py`) :
 
 ```python
-from sentinel_guard import SentinelGuard, MistralModelProvider
+from hallucide import Hallucide, MistralModelProvider
 
-guard = SentinelGuard(model_provider=MistralModelProvider(api_key="sk-..."))
+guard = Hallucide(model_provider=MistralModelProvider(api_key="sk-..."))
 result = guard.ask(message="Que dit l'article 1103 du code civil ?",
                    query={"route": "code_article", "article": "1103", "code": "code civil"})
 ```
@@ -212,7 +212,7 @@ Deux cas réels déjà joués (voir `README.md`) qui matérialisent la garantie 
 
 **Mise à jour du 4 juillet** : sur décision de l'équipe, on est passé de « ne rien
 toucher au moteur » à « étendre le moteur de façon additive et prouvée ». Deux
-changements dans `src/sentinel_guard/`, tous deux **additifs** (rien de retiré,
+changements dans `src/hallucide/`, tous deux **additifs** (rien de retiré,
 comportement d'origine inchangé, 175 tests d'origine préservés) :
 
 - **Réorganisation par étapes** : les 27 modules rangés en dossiers `_1_…` à

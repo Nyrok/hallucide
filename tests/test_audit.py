@@ -1,6 +1,6 @@
-from sentinel_guard import Orchestrator, RiskTier
-from sentinel_guard._7_audit.audit import build_compliance_log, passage_hash, verify_replay
-from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
+from hallucide import Orchestrator, RiskTier
+from hallucide._7_audit.audit import build_compliance_log, passage_hash, verify_replay
+from hallucide.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
 
 
 class DummyDecomposer:

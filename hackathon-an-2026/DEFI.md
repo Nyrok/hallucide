@@ -16,7 +16,7 @@ Le défi consiste donc à ne jamais laisser une affirmation non vérifiée se pr
 
 La solution. Hallucide est une couche de confiance entre le modèle et l'utilisateur. La réponse est interceptée avant affichage, découpée en affirmations élémentaires, puis chaque affirmation est confrontée à l'open data officiel : articles de code consolidés, questions parlementaires, mandats et commissions des députés, données tabulaires data.gouv.fr. La réponse n'est affichée qu'annotée, affirmation par affirmation, avec sa source datée. Ce que le système ne peut pas sourcer, il le signale au lieu de le présenter comme un fait.
 
-Le verdict ne vient jamais du modèle : un pipeline déterministe (Sentinel Guard) vérifie le verbatim, applique un plancher de risque incontournable, exige une décision humaine pour tout résultat à risque élevé, et journalise chaque étape dans un journal de conformité rejouable. Le modèle de décomposition est interchangeable (Claude, Mistral, Gemini) ; aucun ne juge sa propre fidélité.
+Le verdict ne vient jamais du modèle : un pipeline déterministe (Hallucide) vérifie le verbatim, applique un plancher de risque incontournable, exige une décision humaine pour tout résultat à risque élevé, et journalise chaque étape dans un journal de conformité rejouable. Le modèle de décomposition est interchangeable (Claude, Mistral, Gemini) ; aucun ne juge sa propre fidélité.
 
 ### Image principale
 ![Image principale](images/cover.png)
@@ -65,7 +65,7 @@ Cochez les ressources utilisées en remplaçant `[ ]` par `[x]`.
 - [Présentation Hallucide](docs/presentation-hallucide.pdf)
 - [Spécification du moteur](docs/specification-moteur.pdf)
 - [Statut d'implémentation](docs/statut-implementation.pdf)
-- [Design](docs/design-hallucide.pdf)
+- [Design technique](docs/design-technique.pdf)
 
 ### URL de démonstration
 http://141.11.165.40:8770

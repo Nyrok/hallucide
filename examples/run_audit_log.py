@@ -4,11 +4,11 @@ from pathlib import Path
 workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard._7_audit.audit import build_compliance_log
-from sentinel_guard._3_retrieval.moulineuse import MoulineuseRetrievalProvider
-from sentinel_guard._1_decomposition.orchestration import Orchestrator
-from sentinel_guard._5_triage.triage import RiskTier
-from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
+from hallucide._7_audit.audit import build_compliance_log
+from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider
+from hallucide._1_decomposition.orchestration import Orchestrator
+from hallucide._5_triage.triage import RiskTier
+from hallucide.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
 
 
 class SingleIntentDecomposer:

@@ -1,4 +1,4 @@
-# Hallucide, document de design
+# Hallucide, design technique
 
 Hackathon « IA et Hallucination », défi Assemblée nationale. Porteur : Hamza Konte.
 

@@ -24,7 +24,7 @@ load_env_file(workspace_root / ".env")
 
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard import (
+from hallucide import (
     MistralModelProvider,
     Orchestrator,
     PromptBasedDecomposer,
@@ -32,8 +32,8 @@ from sentinel_guard import (
     RetrievalState,
     RiskTier,
 )
-from sentinel_guard._3_retrieval.retrieval import RetrievalProvider
-from sentinel_guard.core_types.types import Intent, Passage
+from hallucide._3_retrieval.retrieval import RetrievalProvider
+from hallucide.core_types.types import Intent, Passage
 
 
 class DummyRetrievalProvider(RetrievalProvider):

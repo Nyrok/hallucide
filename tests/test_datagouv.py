@@ -1,8 +1,8 @@
 import pytest
 
-from sentinel_guard._3_retrieval.datagouv import DataGouvRetrievalProvider
-from sentinel_guard.core_types.exceptions import RetrievalError
-from sentinel_guard.core_types.types import Intent, RetrievalState
+from hallucide._3_retrieval.datagouv import DataGouvRetrievalProvider
+from hallucide.core_types.exceptions import RetrievalError
+from hallucide.core_types.types import Intent, RetrievalState
 
 _SINGLE_ROW_RESPONSE = """Querying resource: resultats-definitifs-par-regions.csv
 Resource ID: f69ffab7-fe37-494e-ad6d-a7cfc80ddc1f

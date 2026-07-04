@@ -13,8 +13,8 @@ from pathlib import Path
 workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard._6_validation.document import segment_source_units, verify_document
-from sentinel_guard.core_types.types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
+from hallucide._6_validation.document import segment_source_units, verify_document
+from hallucide.core_types.types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
 
 LOI = Passage(
     source_id="LOI-DEMO",

@@ -3,9 +3,9 @@ import zipfile
 
 import pytest
 
-from sentinel_guard.core_types.exceptions import RetrievalError
-from sentinel_guard._3_retrieval.file_retrieval import FileRetrievalProvider, _extract_csv_bytes, _parse_csv
-from sentinel_guard.core_types.types import Intent, RetrievalState
+from hallucide.core_types.exceptions import RetrievalError
+from hallucide._3_retrieval.file_retrieval import FileRetrievalProvider, _extract_csv_bytes, _parse_csv
+from hallucide.core_types.types import Intent, RetrievalState
 
 _CSV = (
     "EC_MEASURE;GEO;TIME_PERIOD;OBS_VALUE\n"
@@ -37,7 +37,7 @@ class FakeClient:
 
 def _provider_with_payload(monkeypatch, payload: bytes) -> FileRetrievalProvider:
     provider = FileRetrievalProvider(client=FakeClient("https://example.test/file.csv"))
-    monkeypatch.setattr("sentinel_guard._3_retrieval.file_retrieval._download", lambda url: payload)
+    monkeypatch.setattr("hallucide._3_retrieval.file_retrieval._download", lambda url: payload)
     return provider
 
 

@@ -1,6 +1,6 @@
-from sentinel_guard import AskResult, MockModelProvider, RiskTier, SentinelGuard, SovereignLogStore
-from sentinel_guard._6_validation.human_validation import ValidationDecision, ValidationKey
-from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
+from hallucide import AskResult, MockModelProvider, RiskTier, Hallucide, SovereignLogStore
+from hallucide._6_validation.human_validation import ValidationDecision, ValidationKey
+from hallucide.core_types.types import Intent, Passage, RetrievalState
 
 
 class FakeRetrievalProvider:
@@ -14,7 +14,7 @@ class FakeRetrievalProvider:
         )
 
 
-def _build_guard() -> SentinelGuard:
+def _build_guard() -> Hallucide:
     model_provider = MockModelProvider(
         responses={
             "decompose": '[{"id": "1", "question": "Que dit l\'article 1103 ?"}]',
@@ -24,7 +24,7 @@ def _build_guard() -> SentinelGuard:
             ),
         }
     )
-    guard = SentinelGuard(model_provider=model_provider)
+    guard = Hallucide(model_provider=model_provider)
     guard.retrieval_provider = FakeRetrievalProvider()
     return guard
 
@@ -47,7 +47,7 @@ def test_ask_records_compliance_entry_in_log_store() -> None:
 
 
 def test_ask_never_logs_the_question_in_compliance_entry() -> None:
-    # §13.4 : utiliser SentinelGuard implique le mode souverain par
+    # §13.4 : utiliser Hallucide implique le mode souverain par
     # construction -- le journal Conformité ne contient jamais `query`.
     guard = _build_guard()
     guard.ask(message="Question sensible de parlementaire", query={"route": "code_article"})
@@ -112,7 +112,7 @@ def test_guard_uses_shared_log_store_across_calls() -> None:
             "claims": '[{"ref": "Les contrats légalement formés tiennent lieu de loi à ceux qui les ont faits.", "status": "AUTHENTIFIÉ"}]',
         }
     )
-    guard = SentinelGuard(model_provider=model_provider, log_store=store)
+    guard = Hallucide(model_provider=model_provider, log_store=store)
     guard.retrieval_provider = FakeRetrievalProvider()
 
     guard.ask(message="Q1", query={"route": "code_article"})

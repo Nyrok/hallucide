@@ -1,13 +1,13 @@
-from sentinel_guard import ClaudeModelProvider
-from sentinel_guard.core_types.exceptions import SentinelGuardError
+from hallucide import ClaudeModelProvider
+from hallucide.core_types.exceptions import HallucideError
 
 
 def test_claude_provider_rejects_forced_tool_choice() -> None:
     provider = ClaudeModelProvider(api_key="test-key")
     try:
         provider.generate(messages=[{"role": "system", "content": "foo"}], tools=[], tool_choice="required")
-        assert False, "Expected SentinelGuardError"
-    except SentinelGuardError as exc:
+        assert False, "Expected HallucideError"
+    except HallucideError as exc:
         assert "forced tool calling" in str(exc)
 
 
@@ -51,6 +51,6 @@ def test_claude_provider_raises_when_no_text_block() -> None:
     provider = DummyProvider(api_key="test-key")
     try:
         provider.generate(messages=[{"role": "user", "content": "hello"}], tools=[], tool_choice=None)
-        assert False, "Expected SentinelGuardError"
-    except SentinelGuardError:
+        assert False, "Expected HallucideError"
+    except HallucideError:
         assert True

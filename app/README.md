@@ -1,7 +1,7 @@
 # app/ — front de chat DSFR et backend HTTP
 
-Interface web branchée sur le moteur Sentinel Guard. Le moteur
-(`src/sentinel_guard/`) et le démonstrateur historique (`ui/`) ne sont pas
+Interface web branchée sur le moteur Hallucide. Le moteur
+(`src/hallucide/`) et le démonstrateur historique (`ui/`) ne sont pas
 modifiés : cette couche les consomme, elle ne les remplace pas.
 
 ## Lancer
@@ -21,7 +21,7 @@ Port configurable : `WEBAPP_PORT=8888 python -m app.server`.
 
 | Fait | Ne fait pas |
 |---|---|
-| Appelle le vrai moteur via `SentinelGuard.ask` (réutilise `ui/server.py`) | Ne re-vérifie rien, ne juge rien |
+| Appelle le vrai moteur via `Hallucide.ask` (réutilise `ui/server.py`) | Ne re-vérifie rien, ne juge rien |
 | Traduit le statut déterministe du moteur en score 0-100 + couleur | N'invente aucun statut ni champ |
 | Affiche le passage source réel, la source, le journal de conformité | Ne masque ni ne reformule les données du moteur |
 | Marque « revue humaine requise » quand `published == False` | Ne prend aucune décision d'approbation/rejet |

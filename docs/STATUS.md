@@ -1,4 +1,4 @@
-# Statut d'implémentation — Sentinel-Guard v4
+# Statut d'implémentation — Hallucide v4
 
 Dernière mise à jour : voir date du commit. 220 tests passent (`python -m pytest`).
 
@@ -27,7 +27,7 @@ Estimation globale : **~87%** de la spec v3 implémentée (+ delta v4 complet). 
 | §9 API vs local | N/A | — | Narratif, satisfait par construction (agnostique au provider) |
 | §10 Matrice des pièges | ~70% | multiples | A1,A2,A3,B1,B2,B4,C1,C2,E1,E2,E4,F1 traités. **D1-D3,C3,E3 hors de portée du code seul** (jugement humain par construction, cf. §10 de la spec) |
 | §12 Mesure | ~95% | `measurement.py`, `trap_dataset.py`, `calibration.py` | Banc réel sur vérificateur+triage : 100% blocage correct, 0% sur-refus, 0% faux négatifs. **(v4)** sur-refus mesuré par mode document. Kappa de Cohen inter-annotateur implémenté et testé (accord parfait, partiel, désaccord systématique) — reste à exercer avec de vraies annotations humaines sur le gold standard, ce qui est une activité humaine, pas un manque de code |
-| §13 Déploiement souverain | ~40% | `sovereign_log.py` | §13.4 (cloisonnement logs) codé et câblé dans `SentinelGuard`. §13.1-13.3,13.5 narratif/DSI, non codable |
+| §13 Déploiement souverain | ~40% | `sovereign_log.py` | §13.4 (cloisonnement logs) codé et câblé dans `Hallucide`. §13.1-13.3,13.5 narratif/DSI, non codable |
 | §14 Invariants | ~85% | multiples | Majorité vérifiable par construction/tests, **INV-015/016/017 (v4) testés**. INV-009 narratif, INV-014 pas de scan d'imports dédié |
 | §15 Interfaces canoniques | ~95% | `types.py` | Correspondance quasi exacte avec les pseudo-types de la spec, **types v4 inclus** (`DocumentMode`, `DocumentDraft`, `CoverageMap`) |
 | §16 Priorité des règles | N/A | — | Respecté par construction du code |
@@ -57,7 +57,7 @@ Estimation globale : **~87%** de la spec v3 implémentée (+ delta v4 complet). 
 | E4 — intention oubliée | ✅ borné | `coverage.py`, élévation auto du risque |
 | F1 — verbatim non opposable | ✅ verrouillé | dérivation `opposable`, `CITÉ_NON_OPPOSABLE` |
 
-## Modules (`src/sentinel_guard/`)
+## Modules (`src/hallucide/`)
 
 | Module | Rôle |
 |---|---|
@@ -82,7 +82,7 @@ Estimation globale : **~87%** de la spec v3 implémentée (+ delta v4 complet). 
 | `human_validation.py` | Registre de décisions humaines (§4 étape 9) |
 | `audit.py` | Registre de conformité, hashes rejouables (§8) |
 | `sovereign_log.py` | Cloisonnement conformité/accès (§13.4) |
-| `core.py` | Façade unifiée `SentinelGuard` |
+| `core.py` | Façade unifiée `Hallucide` |
 | `measurement.py` / `trap_dataset.py` | Banc de mesure (§12) |
 | `calibration.py` | Kappa de Cohen inter-annotateur, validation du gold standard (§12) |
 | `exceptions.py` | Hiérarchie d'exceptions |
@@ -128,7 +128,7 @@ Gemini, Mistral et LiteLLM ont tous été confirmés fonctionnels de bout en bou
 - **Bug de troncature (B2)** : `_detect_adjacent_truncation` ne vérifiait que la première occurrence d'une citation répétée dans un passage, pouvant manquer une troncature sur la bonne occurrence. Corrigé pour vérifier toutes les occurrences.
 - **APIs Gemini/Mistral cassées** : URLs et modèles inventés, jamais vérifiés en direct (contrairement à Moulineuse/data.gouv). Corrigées contre les vraies API (endpoints, modèles actuels, format de payload), plus un fix générique de parsing JSON enveloppé en markdown et la désactivation du mode "thinking" de Gemini 2.5 qui tronquait les réponses courtes.
 - **Filtre multi-saut trop large** : `select_next_hop` suivait initialement des renvois `MODIFIE` vers des ordonnances JORF non récupérables par la route `code_article`. Corrigé en filtrant aussi sur `@naturetexte == "CODE"`.
-- **Conflit `SentinelGuard.confidential`** : un paramètre configurable produisait des entrées de log rejetées par le `SovereignLogStore` (qui refuse toute entrée avec `query` par construction). Résolu en supprimant l'option — utiliser `SentinelGuard` implique le mode souverain par construction.
+- **Conflit `Hallucide.confidential`** : un paramètre configurable produisait des entrées de log rejetées par le `SovereignLogStore` (qui refuse toute entrée avec `query` par construction). Résolu en supprimant l'option — utiliser `Hallucide` implique le mode souverain par construction.
 - **Vestige `tool_choice` incohérent (§6)** : `PromptBasedDecomposer`/`PromptBasedIntentGenerator` calculaient `tool_choice="required" if supports_forced_tool_calling else None` tout en passant systématiquement `tools=[]` — forcer un outil qui n'est jamais déclaré n'a aucun effet. Nettoyé : ces classes n'appellent jamais MCP elles-mêmes (l'orchestrateur le fait toujours en amont), donc `tool_choice=None` sans condition, avec le choix architectural documenté en commentaire.
 - **LiteLLM bloqué par l'environnement puis débloqué (§17)** : `litellm.completion()` échouait en `SSL: CERTIFICATE_VERIFY_FAILED` via `httpx`/`certifi`, alors que les wrappers `urllib` de `gemini.py`/`mistral.py` fonctionnaient. Cause confirmée : Avast Antivirus fait de l'inspection HTTPS et installe son certificat racine (`CN=Avast Web/Mail Shield Root`) dans le magasin Windows natif (`Cert:\LocalMachine\Root`, utilisé par `urllib`), jamais dans le bundle Mozilla embarqué de `certifi` (utilisé par `httpx`). `SSL_CERT_FILE` ne suffisait pas. Débloqué avec le paquet `truststore`, qui patche `ssl` pour utiliser l'API native de l'OS (`SChannel` sous Windows) au lieu du bundle certifi — portable sur toute machine avec inspection HTTPS (antivirus ou proxy d'entreprise), sans export manuel de certificat. `LiteLLMModelProvider` l'injecte automatiquement à l'initialisation. Vérifié en direct sur Mistral via LiteLLM.
 

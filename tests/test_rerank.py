@@ -1,4 +1,4 @@
-from sentinel_guard._3_retrieval.moulineuse import _rerank_hits, _hit_title, _hit_date
+from hallucide._3_retrieval.moulineuse import _rerank_hits, _hit_title, _hit_date
 
 
 def _hit(title: str, date: str | None = None) -> dict:

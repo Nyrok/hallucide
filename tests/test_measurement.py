@@ -1,4 +1,4 @@
-from sentinel_guard.analysis.measurement import (
+from hallucide.analysis.measurement import (
     REFUS,
     TrapCase,
     TriageCase,
@@ -7,9 +7,9 @@ from sentinel_guard.analysis.measurement import (
     run_measurement,
     run_triage_measurement,
 )
-from sentinel_guard.analysis.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET
-from sentinel_guard._5_triage.triage import RiskTier
-from sentinel_guard.core_types.types import Claim, ClaimStatus, DocumentMode, Passage
+from hallucide.analysis.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET
+from hallucide._5_triage.triage import RiskTier
+from hallucide.core_types.types import Claim, ClaimStatus, DocumentMode, Passage
 
 
 def test_evaluate_case_correct_for_exact_citation() -> None:

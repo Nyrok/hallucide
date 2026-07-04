@@ -1,7 +1,7 @@
-from sentinel_guard import Orchestrator, OrchestrationResult, RiskTier
-from sentinel_guard.core_types.exceptions import RetrievalError, VerificationError
-from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
-from sentinel_guard._3_retrieval.retrieval import RetrievalProvider
+from hallucide import Orchestrator, OrchestrationResult, RiskTier
+from hallucide.core_types.exceptions import RetrievalError, VerificationError
+from hallucide.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
+from hallucide._3_retrieval.retrieval import RetrievalProvider
 
 
 class DummyDecomposer:

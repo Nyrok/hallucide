@@ -6,7 +6,7 @@ confrontée mot pour mot au passage officiel récupéré (open data du Parlement
 codes consolidés, data.gouv.fr). L'utilisateur ne reçoit jamais une affirmation
 non vérifiée présentée comme un fait : le verdict vient de la source, jamais du modèle.
 
-Le moteur de vérification s'appelle Sentinel Guard (`src/`). C'est un pipeline
+Le moteur de vérification s'appelle Hallucide (`src/`). C'est un pipeline
 déterministe : décomposition de la question, récupération des passages officiels,
 vérification verbatim, plancher de risque, validation humaine, journal d'audit.
 Spécification : `docs/spec-v4.md`. Statut d'implémentation : `docs/STATUS.md`.
@@ -41,7 +41,7 @@ Sans clé, l'interface affiche « moteur non connecté ». Rien n'est simulé.
 
 ```
 app/                front de chat DSFR + backend HTTP (python -m app.server)
-src/                moteur Sentinel Guard, rangé par étape du pipeline
+src/                moteur Hallucide, rangé par étape du pipeline
 tests/              pytest (make test)
 ui/                 démonstrateur historique (python -m ui.server, port 8765)
 mock/               maquette statique DSFR de référence
@@ -53,7 +53,7 @@ hackathon-an-2026/  fiche défi du hackathon
 ## Architecture
 
 ```
-Client → SentinelGuard.ask() → Orchestrator (décompose, récupère, vérifie)
+Client → Hallucide.ask() → Orchestrator (décompose, récupère, vérifie)
               ├── MultiSourceRetrievalProvider
               │     ├── MoulineuseRetrievalProvider  (normatif/parlementaire, MCP réel)
               │     ├── DataGouvRetrievalProvider    (donnée tabulaire, MCP réel)
@@ -114,5 +114,5 @@ Scripts exécutables dans `examples/`, un par fonctionnalité du moteur
 (Moulineuse et data.gouv ne demandent pas de clé) :
 
 ```bash
-python examples/run_sentinel_guard.py
+python examples/run_hallucide.py
 ```

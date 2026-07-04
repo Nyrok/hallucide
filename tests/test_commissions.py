@@ -1,6 +1,6 @@
-from sentinel_guard._3_retrieval.moulineuse import MoulineuseRetrievalProvider, _date_seule
-from sentinel_guard.core_types.exceptions import RetrievalError
-from sentinel_guard.core_types.types import Intent, RetrievalState
+from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider, _date_seule
+from hallucide.core_types.exceptions import RetrievalError
+from hallucide.core_types.types import Intent, RetrievalState
 
 
 class FakeClient:

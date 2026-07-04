@@ -1,5 +1,5 @@
 [project]
-name = "sentinel_guard"
+name = "hallucide"
 version = "0.1.0"
 description = "Core pipeline for deterministic source fidelity verification and retrieval orchestration."
 authors = [{name = "Sentinel Guard Team", email = "team@example.com"}]

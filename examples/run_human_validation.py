@@ -4,9 +4,9 @@ from pathlib import Path
 workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard import MockModelProvider, MultiSourceRetrievalProvider, SentinelGuard
-from sentinel_guard._6_validation.human_validation import ValidationDecision, ValidationKey
-from sentinel_guard._3_retrieval.moulineuse import MoulineuseRetrievalProvider
+from hallucide import MockModelProvider, MultiSourceRetrievalProvider, Hallucide
+from hallucide._6_validation.human_validation import ValidationDecision, ValidationKey
+from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider
 
 
 def main() -> None:
@@ -20,7 +20,7 @@ def main() -> None:
         }
     )
 
-    guard = SentinelGuard(
+    guard = Hallucide(
         model_provider=model_provider,
         retrieval_provider=MultiSourceRetrievalProvider(moulineuse=MoulineuseRetrievalProvider()),
     )

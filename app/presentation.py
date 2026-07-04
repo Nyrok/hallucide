@@ -3,7 +3,7 @@
 ┌───────────────────────────────────────────────────────────────────────────┐
 │  CE FICHIER N'EST PAS DE LA VÉRIFICATION.                                   │
 │  C'est un HABILLAGE du statut déterministe déjà produit par le moteur       │
-│  (src/sentinel_guard/verifier.py). Le score 0-100 ne fait que TRADUIRE en   │
+│  (src/hallucide/verifier.py). Le score 0-100 ne fait que TRADUIRE en   │
 │  chiffre et en couleur un statut que le code a déjà établi mot pour mot.    │
 │  À dire tel quel au pitch, sinon un juré demandera « d'où sort ce chiffre » │
 │  → réponse : « d'un mapping fixe et déterministe du statut du moteur, pas   │

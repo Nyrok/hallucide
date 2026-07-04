@@ -1,7 +1,7 @@
-from sentinel_guard import PromptBasedDecomposer, PromptBasedIntentGenerator
-from sentinel_guard.core_types.exceptions import SentinelGuardError
-from sentinel_guard._1_decomposition.llm import ModelProvider
-from sentinel_guard.core_types.types import ClaimStatus, Intent, Passage
+from hallucide import PromptBasedDecomposer, PromptBasedIntentGenerator
+from hallucide.core_types.exceptions import HallucideError
+from hallucide._1_decomposition.llm import ModelProvider
+from hallucide.core_types.types import ClaimStatus, Intent, Passage
 
 
 class DummyModelProvider:
@@ -48,6 +48,6 @@ def test_prompt_based_decomposer_raises_on_invalid_json() -> None:
     decomposer = PromptBasedDecomposer(InvalidProvider())
     try:
         decomposer.decompose("Quelle est la règle ?")
-        assert False, "Expected SentinelGuardError"
-    except SentinelGuardError:
+        assert False, "Expected HallucideError"
+    except HallucideError:
         assert True
