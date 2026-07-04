@@ -61,7 +61,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 # Types MIME servis par le front (stdlib, pas de dépendance).
 _MIME = {".html": "text/html", ".css": "text/css", ".js": "application/javascript",
-         ".svg": "image/svg+xml", ".ico": "image/x-icon", ".json": "application/json"}
+         ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json"}
 
 
 # --- Enrichissement : ajoute le score/couleur SANS toucher aux champs moteur ---
