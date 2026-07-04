@@ -134,7 +134,9 @@ def detect_route(question: str) -> dict:
 
     # 1bis-a. Mandat de député : « X est-il député ? », « X est-elle sénatrice ? »,
     #    « est-ce que X est député ». Donnée structurée (annuaire acteurs), sans LLM.
-    m_mandat = re.search(r"^(?:est[- ]ce que\s+)?(.+?)\s+est[- ](?:il|elle)\s+(?:un[e]?\s+)?(?:député|députée|sénateur|sénatrice)", q, re.IGNORECASE)
+    m_mandat = re.search(
+        r"^(?:est[- ]ce que\s+)?(.+?)\s+(?:est[- ](?:il|elle)|a[- ]?t[- ]?(?:il|elle)\s+été|était[- ](?:il|elle)|fut[- ](?:il|elle))\s+(?:un[e]?\s+)?(?:député|députée|sénateur|sénatrice)",
+        q, re.IGNORECASE)
     if not m_mandat:
         m_mandat = re.search(r"(?:député|députée)\s*\?", q, re.IGNORECASE) and _NOM_DEPUTE_RE.search(q) and None or None
     if m_mandat:
