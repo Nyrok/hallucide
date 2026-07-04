@@ -358,10 +358,6 @@ function renderResult(bubble, data) {
     bubble.append(alertBox("info", "Aucune réponse fiable.",
       "Le système n'a pas pu produire une réponse vérifiée pour cette question. " +
       "Il préfère ne pas répondre plutôt que de risquer une invention (NO_ANSWER)."));
-    const raw = el("details", "hd-raw");
-    raw.append(el("summary", null, "Détail technique"));
-    raw.append(el("pre", null, escapeHtml(data.error)));
-    bubble.append(raw);
     return;
   }
 
