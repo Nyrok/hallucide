@@ -57,8 +57,14 @@ _CODE_RE = re.compile(r"\bcode\s+([\wÀ-ÿ'\s]+?)(?:\s*[?.,;]|$)", re.IGNORECASE
 # seul ne suffit pas comme frontière, des titres réels en contiennent
 # (« code de la construction et de l'habitation ») -- on ne coupe sur « et »
 # que s'il introduit un interrogatif ou un verbe de question.
+#   ... et aux prépositions qui introduisent un complément de question après le
+#   nom du code (« code civil SUR la vie privée », « code civil EN cas de… »).
+#   Ces mots n'apparaissent jamais en tête de complément dans un titre de code
+#   réel (les titres enchaînent sur « de / du / de la / des / et / général »),
+#   donc les couper ne mutile pas « code de la construction et de l'habitation ».
 _CODE_BREAK_RE = re.compile(
-    r"\s+(?:et\s+)?(?:quelle?s?|que|qui|quoi|comment|combien|pourquoi|dont|est-ce|peut|doit|dit)\b.*$",
+    r"\s+(?:et\s+)?(?:quelle?s?|que|qui|quoi|comment|combien|pourquoi|dont|est-ce|peut|doit|dit"
+    r"|en|sur|dans|pour|avec|afin|concernant|lorsqu\w*|quand)\b.*$",
     re.IGNORECASE,
 )
 _DATA_HINTS = ("combien", "nombre", "taux", "médiane", "revenu", "population",
