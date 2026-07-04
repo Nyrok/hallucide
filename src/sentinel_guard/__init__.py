@@ -13,6 +13,7 @@ from .core_types.exceptions import RetrievalError, SentinelGuardError, Verificat
 from ._3_retrieval.file_retrieval import FileRetrievalProvider
 from ._1_decomposition.llm import ModelProvider, MockModelProvider, PromptBasedDecomposer, PromptBasedIntentGenerator
 from .llm_providers.gemini import GeminiModelProvider
+from .llm_providers.claude import ClaudeModelProvider
 from .llm_providers.litellm_provider import LiteLLMModelProvider
 from ._6_validation.human_validation import (
     HumanValidationRegistry,
@@ -143,6 +144,7 @@ __all__ = [
     "DataGouvRetrievalProvider",
     "FileRetrievalProvider",
     "GeminiModelProvider",
+    "ClaudeModelProvider",
     "LiteLLMModelProvider",
     "HumanValidationRegistry",
     "ValidationDecision",
