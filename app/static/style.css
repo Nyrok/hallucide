@@ -136,3 +136,11 @@ body { margin: 0; }
 .hd-flat.hd-claim--risque   { box-shadow: inset .25rem 0 0 0 #CE0500; }
 .hd-flat .fr-badge { margin-right: .5rem; }
 .hd-flat .fr-link { margin-left: .5rem; white-space: nowrap; }
+
+/* Popup d'accueil fermable */
+.hd-welcome { display: flex; gap: 1rem; align-items: flex-start;
+              border: 1px solid #000091; border-left-width: .25rem; border-radius: .25rem;
+              padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+              background: var(--background-alt-grey); }
+.hd-welcome p { flex: 1; margin: 0; }
+.hd-welcome__close { flex: 0 0 auto; }

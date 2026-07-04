@@ -560,12 +560,17 @@ composer.addEventListener("submit", (e) => {
   const msg = input.value.trim();
   if (msg) handleQuestion(msg);
 });
-// Message d'accueil
+// Message d'accueil : popup fermable au-dessus du fil.
 window.addEventListener("DOMContentLoaded", () => {
-  const b = addBotMsg();
-  b.append(el("p", "fr-mb-0",
+  const pop = el("div", "hd-welcome");
+  pop.append(el("p", "fr-mb-0",
     "Posez une question juridique ou administrative. Hallucide répond, puis vérifie chaque affirmation " +
     "contre la source officielle, <b>mot pour mot</b>. " +
     "Cliquez une affirmation soulignée pour voir sa vérification."));
+  const close = el("button", "fr-btn fr-btn--tertiary-no-outline fr-btn--sm hd-welcome__close", "Fermer");
+  close.type = "button";
+  close.addEventListener("click", () => pop.remove());
+  pop.append(close);
+  thread.append(pop);
   autoGrow();
 });

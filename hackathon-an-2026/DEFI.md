@@ -18,9 +18,6 @@ La solution. Hallucide est une couche de confiance entre le modèle et l'utilisa
 
 Le verdict ne vient jamais du modèle : un pipeline déterministe (Hallucide) vérifie le verbatim, applique un plancher de risque incontournable, exige une décision humaine pour tout résultat à risque élevé, et journalise chaque étape dans un journal de conformité rejouable. Le modèle de décomposition est interchangeable (Claude, Mistral, Gemini) ; aucun ne juge sa propre fidélité.
 
-### Image principale
-![Image principale](images/cover.png)
-
 ### Contributeurs
 - Hamza Konte
 - Rayane Bourkaib
@@ -62,6 +59,7 @@ Cochez les ressources utilisées en remplaçant `[ ]` par `[x]`.
 - [ ] `legiwatch-serveur-mcp-parlement` — Serveur MCP Parlement ✺ LegiWatch
 
 ### Galerie
+- [Interface Hallucide, réponse vérifiée](images/image-3.png)
 - [Image 1](images/image-1.png)
 - [Image 2](images/image-2.png)
 
