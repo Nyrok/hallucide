@@ -353,7 +353,15 @@ function renderResult(bubble, data) {
     return;
   }
   if (data.error) {
-    bubble.append(alertBox("error", "Erreur moteur.", data.error));
+    // Toute erreur moteur est présentée comme NO_ANSWER : le système se tait
+    // plutôt que d'afficher une erreur technique. Détail replié pour l'audit.
+    bubble.append(alertBox("info", "Aucune réponse fiable.",
+      "Le système n'a pas pu produire une réponse vérifiée pour cette question. " +
+      "Il préfère ne pas répondre plutôt que de risquer une invention (NO_ANSWER)."));
+    const raw = el("details", "hd-raw");
+    raw.append(el("summary", null, "Détail technique"));
+    raw.append(el("pre", null, escapeHtml(data.error)));
+    bubble.append(raw);
     return;
   }
 
@@ -520,7 +528,10 @@ async function runAsk(message, route, form) {
     renderResult(bubble, data);
   } catch (e) {
     bubble.innerHTML = "";
-    bubble.append(alertBox("error", "Erreur réseau.", e.message));
+    bubble.append(el("div", "hd-msg__who", "Hallucide"));
+    bubble.append(alertBox("info", "Aucune réponse fiable.",
+      "Le système n'a pas pu joindre le moteur. Il préfère ne pas répondre " +
+      "plutôt que de risquer une invention (NO_ANSWER)."));
   }
 }
 
