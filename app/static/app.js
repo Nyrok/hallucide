@@ -359,6 +359,11 @@ function sourceUrl(intent) {
   if (m) return `https://www.senat.fr/questions/base/20${m[1]}/q${id}.html`;
   // Acteur non résolu (« Aucun mandat trouvé ») : annuaire officiel des députés
   if (/^acteur:/.test(id)) return "https://www.assemblee-nationale.fr/dyn/vos-deputes";
+  if (/^JORFTEXT\d+$/.test(id)) return `https://www.legifrance.gouv.fr/jorf/id/${id}`;
+  if (/^LEGISCTA\d+$/.test(id)) return `https://www.legifrance.gouv.fr/codes/section_lc/${id}`;
+  // Identifiant non mappé mais document réel renvoyé par le MCP : renvoi vers
+  // le portail tricoteuses (source des données).
+  if (id) return "https://tricoteuses.fr";
   return null;
 }
 
