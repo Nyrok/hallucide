@@ -292,9 +292,12 @@ class MoulineuseRetrievalProvider:
         CROSS JOIN LATERAL jsonb_array_elements_text(m->'organesRefs') AS oref
         JOIN assemblee.organes o ON o.uid = oref
         WHERE a.uid = $1
-          AND o.data->>'codeType' = 'ASSEMBLEE'
+          AND o.data->>'codeType' = $2
         ORDER BY date_debut;
     """
+
+    # fonction demandée -> type d'organe dans l'open data Assemblée
+    _FONCTION_ORGANE = {"depute": "ASSEMBLEE", "ministre": "GOUVERNEMENT"}
 
     def _retrieve_mandat(self, query: dict[str, str]) -> Passage:
         # Mandats de député d'un acteur (open data Assemblée). Même contrat que
@@ -302,12 +305,14 @@ class MoulineuseRetrievalProvider:
         # opposable=False. L'ABSENCE de mandat est aussi une réponse tracée :
         # « X est-il député ? » -> non, aucun mandat dans la donnée officielle.
         acteur = (query.get("acteur") or "").strip()
+        fonction = (query.get("fonction") or "depute").strip()
+        organe = self._FONCTION_ORGANE.get(fonction, "ASSEMBLEE")
         acteur_ref = query.get("acteur_ref") or (self._resolve_acteur(acteur) if acteur else None)
 
         lignes: list[str] = []
         if acteur_ref:
             result = self.client.call_tool(
-                "query_sql", {"schema": "assemblee", "query": self._MANDATS_SQL, "params": [acteur_ref]}
+                "query_sql", {"schema": "assemblee", "query": self._MANDATS_SQL, "params": [acteur_ref, organe]}
             )
             for r in _parse_sql_rows(result):
                 qualite = (r.get("qualite") or "Député").strip()
@@ -317,7 +322,8 @@ class MoulineuseRetrievalProvider:
             lignes = list(dict.fromkeys(lignes))
 
         if not lignes:
-            lignes = [f"Aucun mandat de député trouvé pour « {acteur or acteur_ref} » "
+            libf = "député" if fonction == "depute" else "membre du Gouvernement"
+            lignes = [f"Aucun mandat de {libf} trouvé pour « {acteur or acteur_ref} » "
                       "dans l'open data officiel de l'Assemblée nationale."]
 
         texte = "\n".join(lignes)

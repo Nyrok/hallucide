@@ -486,7 +486,7 @@ function autoForm(detection) {
     case "amendement": return { numero: p.numero || "" };
     case "intervention": return { search: p.search || "", orateur: p.orateur || "" };
     case "commissions": return { acteur: p.acteur || "", commission: p.commission || "" };
-    case "mandat": return { acteur: p.acteur || "" };
+    case "mandat": return { acteur: p.acteur || "", fonction: p.fonction || "depute" };
     case "texte_libre": return { query: p.query || "", sort: ($("#sort") && $("#sort").value) || "pertinence" };
     default: return null; // parlement (candidats) / donnee / fichier → formulaire
   }

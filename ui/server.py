@@ -135,7 +135,7 @@ def detect_route(question: str) -> dict:
     # 1bis-a. Mandat de député : « X est-il député ? », « X est-elle sénatrice ? »,
     #    « est-ce que X est député ». Donnée structurée (annuaire acteurs), sans LLM.
     m_mandat = re.search(
-        r"^(?:est[- ]ce que\s+)?(.+?)\s+(?:est[- ](?:il|elle)|a[- ]?t[- ]?(?:il|elle)\s+été|était[- ](?:il|elle)|fut[- ](?:il|elle))\s+(?:un[e]?\s+)?(?:député|députée|sénateur|sénatrice)",
+        r"^(?:est[- ]ce que\s+)?(.+?)\s+(?:est[- ](?:il|elle)|a[- ]?t[- ]?(?:il|elle)\s+été|était[- ](?:il|elle)|fut[- ](?:il|elle))\s+(?:un[e]?\s+)?(député|députée|sénateur|sénatrice|ministre|membre du gouvernement|secrétaire d.état)",
         q, re.IGNORECASE)
     if not m_mandat:
         m_mandat = re.search(r"(?:député|députée)\s*\?", q, re.IGNORECASE) and _NOM_DEPUTE_RE.search(q) and None or None
@@ -145,8 +145,10 @@ def detect_route(question: str) -> dict:
         nom = _NOM_DEPUTE_RE.search(acteur)
         if nom:
             acteur = nom.group(1)
+        fonction_mot = m_mandat.group(2).lower()
+        fonction = "depute" if fonction_mot.startswith(("député", "sénat")) else "ministre"
         return {"route": "mandat", "reason": "Question sur le mandat d'un acteur (open data)",
-                "prefill": {"acteur": acteur}}
+                "prefill": {"acteur": acteur, "fonction": fonction}}
 
     # 1bis. Commissions d'un député (+ dates) : « les commissions où X a siégé /
     #    appartenu », « liste les commissions de X ». Donnée structurée SQL, sûre.
@@ -282,7 +284,8 @@ def _build_query(route: str, form: dict) -> dict:
             q["orateur"] = form["orateur"]
         return q
     if route == "mandat":
-        return {"route": "mandat", "acteur": form.get("acteur", "").strip()}
+        return {"route": "mandat", "acteur": form.get("acteur", "").strip(),
+                "fonction": form.get("fonction", "depute").strip()}
     if route == "commissions":
         q = {"route": "commissions", "acteur": form.get("acteur", "").strip()}
         if form.get("commission"):
