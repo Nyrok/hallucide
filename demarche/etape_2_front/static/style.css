@@ -93,6 +93,9 @@ body { margin: 0; }
 .hd-acc .fr-collapse.hd-open { display: block; }
 
 .hd-claim__meta { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+.hd-detail__key { display: inline-block; min-width: 5.5rem; font-size: .75rem;
+                  text-transform: uppercase; letter-spacing: .03em;
+                  color: var(--text-mention-grey); }
 .hd-correction { font-size: .9rem; color: #CE0500; }
 
 /* Barre de confiance du modèle (stabilité interne, PAS la vérité → fill neutre) */

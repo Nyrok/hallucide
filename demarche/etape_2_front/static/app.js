@@ -152,12 +152,44 @@ function summaryEl(items) {
   return wrap;
 }
 
+// --- Mise en forme des claims « donnée » -------------------------------------
+// Le moteur produit des lignes verbatim du type :
+//   « {document} — {rôle} — du 2002-06-26 au 2007-06-19 »  (rôle optionnel)
+// La vérification porte sur ce verbatim ; ici on ne fait que le PRÉSENTER :
+// dates en français et période affichée avant le nom du document.
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+              "août", "septembre", "octobre", "novembre", "décembre"];
+
+function fmtDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  if (!m) return iso;
+  return `${parseInt(m[3], 10)}${m[3] === "01" ? "er" : ""} ${MOIS[parseInt(m[2], 10) - 1]} ${m[1]}`;
+}
+
+function parseClaim(ref) {
+  const parts = ref.split(" — ");
+  if (parts.length < 2) return null;
+  const per = /^du\s+(\d{4}-\d{2}-\d{2})\s+au\s*(\d{4}-\d{2}-\d{2})?$/.exec(parts[parts.length - 1].trim());
+  if (!per) return null;
+  const doc = parts[0].trim();
+  const role = parts.length > 2 ? parts.slice(1, -1).join(", ").trim() : "";
+  const period = per[2]
+    ? `Du ${fmtDate(per[1])} au ${fmtDate(per[2])}`
+    : `Depuis le ${fmtDate(per[1])}`;
+  return { doc, role, period, display: `${period} : ${doc}${role ? ` (${role})` : ""}` };
+}
+
+function claimDisplay(claim) {
+  const parsed = parseClaim(claim.ref);
+  return parsed ? parsed.display : claim.ref;
+}
+
 // --- Prose annotée --------------------------------------------------------------
 function proseEl(items) {
   const p = el("p", "hd-response");
   items.forEach((it) => {
     const band = it.claim.score?.band || "risque";
-    const span = el("span", `hd-mark hd-mark--${band}`, escapeHtml(it.claim.ref));
+    const span = el("span", `hd-mark hd-mark--${band}`, escapeHtml(claimDisplay(it.claim)));
     span.dataset.claim = it.uid;
     span.setAttribute("role", "button");
     span.setAttribute("tabindex", "0");
@@ -194,7 +226,7 @@ function accordionEl(it) {
   btn.setAttribute("aria-controls", collapseId);
   btn.innerHTML = `<span class="fr-badge fr-badge--sm hd-b--${band}">${BAND_LABELS[band] || band}` +
     (claim.score?.score != null ? ` ${claim.score.score}` : "") + `</span>` +
-    escapeHtml(claim.ref);
+    escapeHtml(claimDisplay(claim));
   title.append(btn);
   sec.append(title);
 
@@ -204,6 +236,21 @@ function accordionEl(it) {
   if (control) {
     body.append(el("p", "fr-text--sm fr-mt-1w fr-mb-1w",
       "Extrait de contrôle : texte réel du passage source, faute d'affirmation exploitable."));
+  }
+
+  // Détail structuré : période, document, rôle, donnée brute vérifiée.
+  const parsed = parseClaim(claim.ref);
+  if (parsed) {
+    const rows = [["Période", parsed.period]];
+    rows.push(["Document", parsed.doc]);
+    if (parsed.role) rows.push(["Rôle", parsed.role]);
+    rows.push(["Donnée vérifiée mot pour mot", claim.ref]);
+    const dl = el("div", "hd-detail fr-mt-1w fr-mb-1w");
+    rows.forEach(([k, v]) => {
+      dl.append(el("p", "fr-text--sm fr-mb-0",
+        `<span class="hd-detail__key">${k}</span> ${escapeHtml(v)}`));
+    });
+    body.append(dl);
   }
   if (claim.score?.label) {
     body.append(el("p", "fr-text--sm fr-mt-1w fr-mb-1w", escapeHtml(claim.score.label)));
