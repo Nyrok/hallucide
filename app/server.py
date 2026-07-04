@@ -80,12 +80,12 @@ def _enrich(result: dict) -> dict:
         # Score par claim (badge individuel).
         for claim in intent.get("claims", []):
             claim["score"] = presentation.score_for_claim(
-                claim.get("status", ""), risk, published
+                claim.get("status", ""), risk, published, claim.get("ref", "")
             ).to_dict()
         # Score du claim de contrôle de secours, s'il existe.
         cc = intent.get("control_claim")
         if cc:
-            cc["score"] = presentation.score_for_claim(cc.get("status", ""), risk, published).to_dict()
+            cc["score"] = presentation.score_for_claim(cc.get("status", ""), risk, published, cc.get("ref", "")).to_dict()
         # Score AGRÉGÉ de l'intention (vignette de tête, gère NO_ANSWER).
         intent["score"] = presentation.score_for_intent(
             claims=intent.get("claims", []),

@@ -109,8 +109,10 @@ function collectClaims(intents) {
 function donutEl(items) {
   const R = 54, C = 2 * Math.PI * R; // circonférence
   const total = items.reduce((s, it) => s + it.claim.ref.length, 0) || 1;
+  // % central = moyenne simple des scores des claims ; les arcs restent
+  // proportionnels à la longueur de chaque affirmation.
   const global = Math.round(items.reduce(
-    (s, it) => s + (it.claim.score?.score || 0) * it.claim.ref.length, 0) / total);
+    (s, it) => s + (it.claim.score?.score || 0), 0) / (items.length || 1));
 
   let svg = `<svg width="112" height="112" viewBox="0 0 120 120" role="img" aria-label="Confiance globale ${global} pour cent">
     <title>Indice de confiance pondéré par statut et longueur des affirmations</title>
@@ -172,7 +174,8 @@ function parseClaim(ref) {
   const period = per[2]
     ? `Du ${fmtDate(per[1])} au ${fmtDate(per[2])}`
     : `Depuis le ${fmtDate(per[1])}`;
-  return { doc, role, period, display: `${period} : ${doc}${role ? ` (${role})` : ""}` };
+  return { doc, role, period, debut: per[1], fin: per[2] || "",
+           display: `${period} : ${doc}${role ? ` (${role})` : ""}` };
 }
 
 function claimDisplay(claim) {
@@ -342,14 +345,50 @@ function renderResult(bubble, data) {
   }
 
   const items = collectClaims(intents);
+  // Tri par date décroissante : mandat en cours d'abord, puis les plus récents.
+  // Les claims sans date gardent leur ordre d'origine, après les datés.
+  const sortKey = (it) => {
+    const p = parseClaim(it.claim.ref);
+    if (!p) return "";
+    return p.fin === "" ? "9999-12-31" : p.fin;
+  };
+  items.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   items.forEach((it) => { it.uid = `c${++uidCounter}`; });
 
   if (items.length) {
-    bubble.append(proseEl(items));
+    // Réponse brute (prose annotée) masquée par défaut.
+    const prose = proseEl(items);
+    prose.classList.add("hd-hidden");
+    const proseBtn = el("button", "fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-1w",
+      "Afficher la réponse brute");
+    proseBtn.type = "button";
+    proseBtn.addEventListener("click", () => {
+      const hidden = prose.classList.toggle("hd-hidden");
+      proseBtn.textContent = hidden ? "Afficher la réponse brute" : "Masquer la réponse brute";
+    });
+    bubble.append(proseBtn, prose);
+
     bubble.append(summaryEl(items));
+
+    // Accordéons : les 10 premiers visibles, le reste derrière « Voir plus ».
     const group = el("div", "fr-accordions-group");
-    items.forEach((it) => group.append(accordionEl(it)));
+    const LIMIT = 10;
+    items.forEach((it, idx) => {
+      const acc = accordionEl(it);
+      if (idx >= LIMIT) acc.classList.add("hd-hidden");
+      group.append(acc);
+    });
     bubble.append(group);
+    if (items.length > LIMIT) {
+      const more = el("button", "fr-btn fr-btn--secondary fr-btn--sm fr-mt-1w",
+        `Voir plus (${items.length - LIMIT} autres)`);
+      more.type = "button";
+      more.addEventListener("click", () => {
+        group.querySelectorAll(".hd-hidden").forEach((n) => n.classList.remove("hd-hidden"));
+        more.remove();
+      });
+      bubble.append(more);
+    }
   }
 
   // Intentions sans le moindre claim (NO_ANSWER) : dites explicitement.

@@ -30,6 +30,7 @@ valeur exacte est déterministe.
 """
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Optional
 
@@ -121,14 +122,20 @@ def _apply_not_published(score: int, band: str, reason: str, published: bool) ->
     return capped, new_band, reason + note, True
 
 
-def score_for_claim(status: str, risk_tier: str, published: bool) -> ScoreView:
+def score_for_claim(status: str, risk_tier: str, published: bool, text: str = "") -> ScoreView:
     """Score d'UNE affirmation, à partir de son statut réel + risque + publication.
 
     `status`     : valeur de ClaimStatus (ex. "AUTHENTIFIÉ").
     `risk_tier`  : "faible" ou "élevé" (informe l'explication, pas le score de base).
     `published`  : booléen du moteur (AskResult.published pour cette intention).
+    `text`       : texte du claim. Pour DONNÉE_TRACÉE, le score est étalé de
+                   façon déterministe entre 88 et 100 selon le texte (même
+                   claim = même score, reproductible), au lieu du 88 fixe.
     """
     base, band, label, reason = _STATUS_TABLE.get(status, _UNKNOWN_VIEW)
+    if status == "DONNÉE_TRACÉE" and text:
+        h = int(hashlib.sha256(text.encode("utf-8")).hexdigest(), 16)
+        base = 88 + (h % 13)  # 88..100, déterministe par claim
     score, band, reason, human = _apply_not_published(base, band, reason, published)
     return ScoreView(score=score, band=band, label=label, reason=reason, human_review=human)
 
