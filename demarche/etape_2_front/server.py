@@ -158,7 +158,8 @@ class Handler(BaseHTTPRequestHandler):
                     resolved = resolve_parlement_uid(message, detection["prefill"].get("numero", ""))
                     result = {**detection, **resolved}
             else:
-                raw = _run_pipeline(payload.get("message", ""), payload.get("route", ""), payload.get("form", {}))
+                raw = _run_pipeline(payload.get("message", ""), payload.get("route", ""),
+                                    payload.get("form", {}), payload.get("model", "claude"))
                 # Cas « moteur non connecté » : clé API absente → on le dit
                 # EXPLICITEMENT au front (jamais de faux résultat déguisé en vrai).
                 if isinstance(raw, dict) and "_API_KEY absente" in raw.get("error", ""):
