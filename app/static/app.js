@@ -399,12 +399,16 @@ function renderResult(bubble, data) {
     });
     bubble.append(group);
     if (items.length > LIMIT) {
+      // Dévoile 5 lignes de plus à chaque clic.
       const more = el("button", "fr-btn fr-btn--secondary fr-btn--sm fr-mt-1w",
         `Voir plus (${items.length - LIMIT} autres)`);
       more.type = "button";
       more.addEventListener("click", () => {
-        group.querySelectorAll(".hd-hidden").forEach((n) => n.classList.remove("hd-hidden"));
-        more.remove();
+        const hidden = group.querySelectorAll(".hd-hidden");
+        for (let i = 0; i < Math.min(5, hidden.length); i++) hidden[i].classList.remove("hd-hidden");
+        const rest = group.querySelectorAll(".hd-hidden").length;
+        if (rest) more.textContent = `Voir plus (${rest} autres)`;
+        else more.remove();
       });
       bubble.append(more);
     }
