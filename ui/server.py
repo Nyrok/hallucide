@@ -41,6 +41,8 @@ HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 # --- Routage automatique déterministe (§4bis : transparent, jamais opaque) ---
 
 _QUESTION_NUM_RE = re.compile(r"\b(?:qosd|qe|qg|question(?:\s+orale)?)\D{0,20}?(\d{2,6})\b", re.IGNORECASE)
+# « amendement n° 245 », « amendement 245 », « amdt 245 »
+_AMENDEMENT_RE = re.compile(r"\b(?:amendements?|amdt)\s*(?:n[°o]\.?\s*)?(\d{1,5})\b", re.IGNORECASE)
 # « L. 1232-6 » : préfixe L/R/D avec point et espace optionnels devant le
 # numéro -- sans cette alternative, la capture s'arrêtait à « L. ».
 # Accepte « article », « articles », « art. » et « art » (abréviations
@@ -96,7 +98,14 @@ def detect_route(question: str) -> dict:
         return {"route": "code_article", "reason": "Référence 'article … du code …' détectée",
                 "prefill": {"article": art.group(1).rstrip(".,;"), "code": "code " + code_name}}
 
-    # 2. Question parlementaire : numéro explicite ou indice lexical parlementaire.
+    # 2. Amendement (« amendement n° 245 », « amdt 245 ») : AVANT la route
+    #    parlementaire, sinon le mot « amendement » y est capté par les indices.
+    amdt = _AMENDEMENT_RE.search(q)
+    if amdt:
+        return {"route": "amendement", "reason": "Numéro d'amendement détecté",
+                "prefill": {"numero": amdt.group(1)}}
+
+    # 3. Question parlementaire : numéro explicite ou indice lexical parlementaire.
     num = _QUESTION_NUM_RE.search(q)
     if num or any(h in low for h in _PARLEMENT_HINTS):
         return {"route": "parlement_question", "reason": "Question parlementaire détectée",
@@ -192,6 +201,11 @@ def _build_query(route: str, form: dict) -> dict:
         return {"route": "code_article", "article": form.get("article", ""), "code": form.get("code", "")}
     if route == "parlement_question":
         return {"route": "parlement_question", "uid": form.get("uid", "")}
+    if route == "amendement":
+        q = {"route": "amendement", "numero": form.get("numero", "")}
+        if form.get("legislature"):
+            q["legislature"] = form["legislature"]
+        return q
     if route == "texte_libre":
         raw_query = form.get("query", "").strip().strip("\"“”«»").strip()
         sort = form.get("sort", "pertinence")

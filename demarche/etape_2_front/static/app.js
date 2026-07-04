@@ -278,6 +278,7 @@ function autoForm(detection) {
   const p = detection.prefill || {};
   switch (detection.route) {
     case "code_article": return { article: p.article || "", code: p.code || "" };
+    case "amendement": return { numero: p.numero || "" };
     case "texte_libre": return { query: p.query || "", sort: ($("#sort") && $("#sort").value) || "pertinence" };
     default: return null; // parlement (candidats) / donnee / fichier → formulaire
   }

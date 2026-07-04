@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html as _html
 import re
 from typing import Any
 
@@ -15,6 +16,23 @@ DEFAULT_MOULINEUSE_URL = "https://mcp.code4code.eu/mcp"
 # texte, la sélection est jugée ambiguë (quasi-égalité) et élève le risque.
 # Au-dessus, un candidat gagne nettement : pas d'ambiguïté à signaler.
 _RERANK_AMBIGUITY_MARGIN = 0.08
+
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_WS_RE = re.compile(r"\s+")
+
+
+def _strip_html(raw: Any) -> str:
+    """Texte brut depuis un fragment HTML (dispositif/exposé d'amendement).
+    Retire les balises, décode les entités (&#160; -> espace), normalise les
+    blancs -- indispensable pour que la vérification verbatim (§7) compare du
+    texte, pas du markup."""
+    if not raw or not isinstance(raw, str):
+        return ""
+    text = _HTML_TAG_RE.sub(" ", raw)
+    text = _html.unescape(text)
+    text = text.replace(" ", " ")
+    return _WS_RE.sub(" ", text).strip()
 
 
 def _hit_title(hit: dict[str, Any]) -> str:
@@ -165,9 +183,74 @@ class MoulineuseRetrievalProvider:
             return self._retrieve_texte_libre(query)
         if route == "parlement_question":
             return self._retrieve_parlement_question(query)
+        if route == "amendement":
+            return self._retrieve_amendement(query)
         raise RetrievalError(
             f"Unknown or missing route '{route}'; expected 'pastille', 'code_article', "
-            "'texte_libre' or 'parlement_question'."
+            "'texte_libre', 'parlement_question' or 'amendement'."
+        )
+
+    def _retrieve_amendement(self, query: dict[str, str]) -> Passage:
+        # Amendement parlementaire (assemblee.amendements) : le DISPOSITIF est le
+        # texte verbatim déposé ; l'amendement est un acte parlementaire -> non
+        # opposable (§6ter), au mieux CITÉ_NON_OPPOSABLE. On récupère le texte,
+        # l'auteur et le SORT (Adopté/Rejeté/Tombé...) -- des faits tracés, pas
+        # la « position » orale d'un ministre (absente de cette source).
+        numero = query.get("numero")
+        if not numero:
+            raise RetrievalError("amendement route requires 'numero'.")
+        legislature = query.get("legislature")
+
+        params: list[Any] = [str(numero)]
+        where = "data->'identification'->>'numeroLong' = $1"
+        if legislature:
+            where += " AND legislature = $2"
+            params.append(int(legislature))
+        sql = f"""
+            SELECT uid,
+                   data->'identification'->>'numeroLong' AS numero,
+                   data->'cycleDeVie'->>'sort' AS sort,
+                   data->'signataires'->'auteur'->>'typeAuteur' AS type_auteur,
+                   data->'corps'->'contenuAuteur'->>'dispositif' AS dispositif,
+                   data->'corps'->'contenuAuteur'->>'exposeSommaire' AS expose,
+                   data->>'texteLegislatifRef' AS texte_ref,
+                   legislature
+            FROM assemblee.amendements
+            WHERE {where}
+            ORDER BY legislature DESC, uid
+            LIMIT 10;
+        """
+        result = self.client.call_tool("query_sql", {"schema": "assemblee", "query": sql, "params": params})
+        rows = _parse_sql_rows(result)
+        if not rows:
+            raise RetrievalError(f"No amendment found for numero '{numero}'.")
+
+        row = rows[0]
+        dispositif = _strip_html(row.get("dispositif"))
+        if not dispositif:
+            raise RetrievalError(f"Amendment '{row.get('uid')}' has no extractable dispositif.")
+
+        # « n° 245 » sans texte de rattachement matche potentiellement un
+        # amendement par dossier/législature -- prendre rows[0] serait une
+        # sélection silencieuse (piège A3). Signalé pour élever le risque.
+        distinct_textes = {r.get("texte_ref") for r in rows}
+        selection_ambiguous = len(distinct_textes) > 1
+
+        return Passage(
+            source_id=str(row.get("uid")),
+            source_type="normatif",
+            opposable=False,  # acte parlementaire, jamais opposable (§6ter)
+            text=dispositif,
+            metadata={
+                "numero": row.get("numero"),
+                "sort": row.get("sort"),
+                "type_auteur": row.get("type_auteur"),
+                "expose_sommaire": _strip_html(row.get("expose")),
+                "texte_ref": row.get("texte_ref"),
+                "legislature": row.get("legislature"),
+                "candidate_count": len(rows),
+                "selection_ambiguous": selection_ambiguous,
+            },
         )
 
     def _retrieve_parlement_question(self, query: dict[str, str]) -> Passage:
