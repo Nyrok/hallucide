@@ -1,5 +1,7 @@
 /* =========================================================================
-   Sentinel Guard — front de chat. Logique de bout en bout, sans dépendance.
+   Hallucide — front de chat DSFR. Logique de bout en bout, sans dépendance JS
+   (le CSS DSFR vient du CDN ; les accordéons sont pilotés ici, pas par le JS
+   DSFR, qui instancie mal du DOM injecté dynamiquement).
 
    Flux d'une question :
      1) POST /resolve  → détecte la route (code_article / parlement / donnée / texte libre)
@@ -9,19 +11,25 @@
           - parlement_question         : on montre les candidats, l'utilisateur choisit,
                                          puis /ask avec l'uid.
           - donnee / fichier           : on montre un petit formulaire à compléter.
-     3) POST /ask     → pipeline réel + scores. On rend une carte par intention.
+     3) POST /ask     → pipeline réel + scores. Rendu façon mock/index.html :
+                        prose annotée + donut global + accordéons par affirmation.
 
    IMPORTANT : rien n'est simulé. Si le backend répond engine_connected:false,
-   on affiche un bandeau « moteur non connecté » — jamais de faux résultat.
+   on affiche une alerte « moteur non connecté » — jamais de faux résultat.
    ========================================================================= */
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const thread = $("#thread");
 const input = $("#input");
 const composer = $("#composer");
 const routeSlot = $("#route-slot");
+
+// Couleur par bande — même source unique que le mock et style.css.
+const BAND_COLORS = { verifie: "#18753C", trace: "#000091", prudence: "#B34000", risque: "#CE0500" };
+const BAND_LABELS = { verifie: "Vérifié", trace: "Donnée tracée", prudence: "Prudence", risque: "Risque" };
+
+let uidCounter = 0; // ids uniques pour lier prose <-> accordéons entre messages
 
 // --- Petits utilitaires DOM -------------------------------------------------
 function el(tag, cls, html) {
@@ -35,6 +43,10 @@ function escapeHtml(s) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 function scrollBottom() { thread.scrollTop = thread.scrollHeight; }
+function flash(node) {
+  if (!node) return;
+  node.classList.remove("hd-flash"); void node.offsetWidth; node.classList.add("hd-flash");
+}
 
 async function api(path, body) {
   const res = await fetch(path, {
@@ -45,22 +57,20 @@ async function api(path, body) {
   return res.json();
 }
 
-// --- Rendu des messages -----------------------------------------------------
+// --- Messages ----------------------------------------------------------------
 function addUserMsg(text) {
-  const msg = el("div", "msg user");
-  msg.append(el("div", "avatar", "🧑"));
-  const bubble = el("div", "bubble");
-  bubble.append(el("div", "whoami", "Vous"), el("p", null, escapeHtml(text)));
+  const msg = el("div", "hd-msg hd-msg--user");
+  const bubble = el("div", "hd-msg__bubble");
+  bubble.append(el("div", "hd-msg__who", "Vous"), el("p", null, escapeHtml(text)));
   msg.append(bubble);
   thread.append(msg);
   scrollBottom();
 }
 
 function addBotMsg() {
-  const msg = el("div", "msg bot");
-  msg.append(el("div", "avatar", "🛡️"));
-  const bubble = el("div", "bubble");
-  bubble.append(el("div", "whoami", "Sentinel Guard"));
+  const msg = el("div", "hd-msg hd-msg--bot");
+  const bubble = el("div", "hd-msg__bubble");
+  bubble.append(el("div", "hd-msg__who", "Hallucide"));
   msg.append(bubble);
   thread.append(msg);
   scrollBottom();
@@ -68,143 +78,243 @@ function addBotMsg() {
 }
 
 function typingIndicator() {
-  return el("div", "typing", "<i></i><i></i><i></i>");
+  return el("div", "hd-typing", "<i></i><i></i><i></i>");
 }
 
-// --- Rendu d'un résultat de vérification ------------------------------------
-function bandLabel(band) {
-  return { verifie: "Vérifié", trace: "Donnée tracée", prudence: "Prudence", risque: "Risque" }[band] || band;
+function alertBox(type, title, detail) {
+  const a = el("div", `fr-alert fr-alert--${type} fr-alert--sm fr-my-1w`);
+  a.append(el("p", null, `<strong>${escapeHtml(title)}</strong>` +
+    (detail ? " " + escapeHtml(detail) : "")));
+  return a;
 }
 
-function gaugeEl(score) {
-  const g = el("div", `gauge band-${score.band}`);
-  g.style.setProperty("--val", score.score);
-  g.append(el("b", null, String(score.score)));
-  return g;
+// --- Collecte des claims d'un résultat ----------------------------------------
+// Aplati tous les claims (et claims de contrôle) de toutes les intentions en une
+// liste uniforme pour la prose, le donut et les accordéons.
+function collectClaims(intents) {
+  const items = [];
+  intents.forEach((intent) => {
+    const claims = intent.claims || [];
+    claims.forEach((c) => items.push({ intent, claim: c, control: false }));
+    if (!claims.length && intent.control_claim) {
+      items.push({ intent, claim: intent.control_claim, control: true });
+    }
+  });
+  return items;
 }
 
-function claimEl(intent, claim, isControl) {
-  const row = el("div", "claim");
-  const s = claim.score || { score: 0, band: "risque", label: claim.status };
-  const scoreSpan = el("div", `claim-score band-${s.band}`, String(s.score));
-  const body = el("div", "claim-text");
-  const prefix = isControl ? "<span class='claim-meta'>claim de contrôle (verbatim réel du passage) · </span>" : "";
-  body.innerHTML = escapeHtml(claim.ref) +
-    `<div class="claim-meta">${prefix}${escapeHtml(s.label || claim.status)}` +
-    (claim.truncation_flagged ? " · ⚠️ troncature signalée" : "") + "</div>";
-  row.append(scoreSpan, body);
-  row.append(el("div", "badge band-" + s.band, s.human_badge ? s.human_badge : ""));
-  row.addEventListener("click", () => openTrace(intent, claim));
-  return row;
+// --- Donut global (arcs proportionnels à la longueur des affirmations) --------
+// % central = moyenne des scores pondérée par la longueur (caractères) de chaque
+// claim — même règle que le mock : une affirmation longue pèse plus lourd.
+function donutEl(items) {
+  const R = 54, C = 2 * Math.PI * R; // circonférence
+  const total = items.reduce((s, it) => s + it.claim.ref.length, 0) || 1;
+  const global = Math.round(items.reduce(
+    (s, it) => s + (it.claim.score?.score || 0) * it.claim.ref.length, 0) / total);
+
+  let svg = `<svg width="112" height="112" viewBox="0 0 120 120" role="img" aria-label="Confiance globale ${global} pour cent">
+    <title>Indice de confiance pondéré par statut et longueur des affirmations</title>
+    <circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--border-default-grey)" stroke-width="12"/>`;
+  let angle = -90;
+  items.forEach((it) => {
+    const frac = it.claim.ref.length / total;
+    const len = frac * C;
+    const color = BAND_COLORS[it.claim.score?.band] || "#666666";
+    svg += `<circle cx="60" cy="60" r="${R}" fill="none" stroke="${color}" stroke-width="12"
+      stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" transform="rotate(${angle.toFixed(1)} 60 60)"/>`;
+    angle += frac * 360;
+  });
+  svg += `<text x="60" y="58" text-anchor="middle" font-size="26" font-weight="700" fill="#161616">${global} %</text>
+    <text x="60" y="76" text-anchor="middle" font-size="10" fill="#666666">CONFIANCE</text></svg>`;
+  return el("div", null, svg);
 }
 
-function intentCard(intent) {
-  const card = el("div", "intent-card");
-  const score = intent.score || { score: 0, band: "risque", label: "?" };
-
-  // En-tête : jauge + question + badge de bande
-  const head = el("div", "intent-head");
-  head.append(gaugeEl(score));
-  head.append(el("div", "intent-question", escapeHtml(intent.question)));
-  const badge = el("div", "badge band-" + score.band,
-    (score.human_badge ? score.human_badge + " " : "") + bandLabel(score.band));
-  head.append(badge);
-  head.style.cursor = "pointer";
-  head.addEventListener("click", () => openTrace(intent, null));
-  card.append(head);
-
-  // Corps : claims (ou message NO_ANSWER) + méta
-  const body = el("div", "intent-body");
-  const claims = intent.claims || [];
-  if (claims.length) {
-    claims.forEach((c) => body.append(claimEl(intent, c, false)));
-  } else if (intent.control_claim) {
-    body.append(claimEl(intent, intent.control_claim, true));
-  } else {
-    body.append(el("div", "claim-meta",
-      "Aucune affirmation vérifiable produite (NO_ANSWER) — le système préfère se taire plutôt qu'inventer."));
-  }
-
-  // Marquage intervention humaine (published == false)
-  if (intent.published === false) {
-    body.append(el("div", "human-flag",
-      "🧑‍⚖️ Intervention humaine requise — NON PUBLIABLE en l'état (risque élevé, §4 étape 9)."));
-  }
-
-  // Source (résumé cliquable)
-  const src = el("div", "claim-meta");
-  src.innerHTML = `Source : <b>${escapeHtml(intent.titre || intent.source_id || "—")}</b> · ` +
-    `${escapeHtml(intent.source_type || "?")} · ` +
-    (intent.opposable ? "opposable ✅" : "non opposable ⚠️") +
-    (intent.pertinence_non_garantie ? " · pertinence non garantie ⚠️" : "");
-  body.append(src);
-
-  card.append(body);
-  return card;
-}
-
-function coverageEl(data) {
-  if (data.coverage_ratio == null) return null;
-  const wrap = el("div", "coverage");
-  const pct = Math.round(data.coverage_ratio * 100);
-  wrap.append(el("span", null, `Couverture ${pct}%`));
-  const bar = el("div", "bar");
-  const fill = el("i");
-  fill.style.width = pct + "%";
-  bar.append(fill);
-  wrap.append(bar);
-  if (data.coverage_passed === false) wrap.append(el("span", null, "⚠️ intention potentiellement oubliée"));
+function summaryEl(items) {
+  const wrap = el("div", "hd-summary");
+  wrap.append(donutEl(items));
+  const detail = el("div", "hd-summary__detail");
+  const counts = {};
+  items.forEach((it) => {
+    const b = it.claim.score?.band || "risque";
+    counts[b] = (counts[b] || 0) + 1;
+  });
+  const breakdown = el("div", "hd-breakdown");
+  Object.entries(counts).forEach(([band, n]) => {
+    breakdown.append(el("span", `fr-badge fr-badge--sm hd-b--${band}`,
+      `${n} ${BAND_LABELS[band] || band}`));
+  });
+  detail.append(breakdown);
+  const ok = counts.verifie || 0, bad = counts.risque || 0;
+  let phrase = `${ok} affirmation${ok > 1 ? "s" : ""} sur ${items.length} confirmée${ok > 1 ? "s" : ""} par une source officielle.`;
+  if (bad) phrase += ` <strong>${bad} non authentifiée${bad > 1 ? "s" : ""}</strong>, à ne pas diffuser en l'état.`;
+  detail.append(el("p", "fr-text--sm fr-mb-0", phrase));
+  wrap.append(detail);
   return wrap;
 }
 
+// --- Prose annotée --------------------------------------------------------------
+function proseEl(items) {
+  const p = el("p", "hd-response");
+  items.forEach((it) => {
+    const band = it.claim.score?.band || "risque";
+    const span = el("span", `hd-mark hd-mark--${band}`, escapeHtml(it.claim.ref));
+    span.dataset.claim = it.uid;
+    span.setAttribute("role", "button");
+    span.setAttribute("tabindex", "0");
+    span.title = `${BAND_LABELS[band] || band}, cliquer pour le détail`;
+    const go = () => {
+      const sec = document.querySelector(`section.fr-accordion[data-claim="${it.uid}"]`);
+      if (!sec) return;
+      const btn = sec.querySelector(".fr-accordion__btn");
+      if (btn && btn.getAttribute("aria-expanded") === "false") btn.click();
+      sec.scrollIntoView({ behavior: "smooth", block: "center" });
+      flash(sec.querySelector(".fr-accordion__title"));
+    };
+    span.addEventListener("click", go);
+    span.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+    });
+    p.append(span, " ");
+  });
+  return p;
+}
+
+// --- Accordéons de vérification ---------------------------------------------------
+function accordionEl(it) {
+  const { intent, claim, control } = it;
+  const band = claim.score?.band || "risque";
+  const sec = el("section", `fr-accordion hd-acc hd-claim--${band}`);
+  sec.dataset.claim = it.uid;
+
+  const collapseId = `hd-col-${it.uid}`;
+  const title = el("h3", "fr-accordion__title");
+  const btn = el("button", "fr-accordion__btn");
+  btn.type = "button";
+  btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-controls", collapseId);
+  btn.innerHTML = `<span class="fr-badge fr-badge--sm hd-b--${band}">${BAND_LABELS[band] || band}` +
+    (claim.score?.score != null ? ` ${claim.score.score}` : "") + `</span>` +
+    escapeHtml(claim.ref);
+  title.append(btn);
+  sec.append(title);
+
+  const body = el("div", "fr-collapse");
+  body.id = collapseId;
+
+  if (control) {
+    body.append(el("p", "fr-text--sm fr-mt-1w fr-mb-1w",
+      "Claim de contrôle : verbatim réel du passage source (aucune affirmation exploitable produite)."));
+  }
+  if (claim.score?.label) {
+    body.append(el("p", "fr-text--sm fr-mt-1w fr-mb-1w", escapeHtml(claim.score.label)));
+  }
+  if (band === "risque" && !control) {
+    body.append(el("p", "hd-correction fr-mb-1w",
+      "Non authentifié : cette affirmation ne correspond pas mot pour mot au passage source."));
+  }
+
+  // Source de l'intention porteuse
+  const meta = el("div", "hd-claim__meta fr-pb-1w");
+  const srcLabel = intent.titre || intent.source_id;
+  if (srcLabel) {
+    meta.append(el("span", "fr-tag fr-tag--sm", escapeHtml(srcLabel) +
+      (intent.source_type ? ` — ${escapeHtml(intent.source_type)}` : "")));
+    meta.append(el("span", "fr-text--xs",
+      intent.opposable ? "Source opposable" : "Source non opposable"));
+    if (intent.pertinence_non_garantie) meta.append(el("span", "fr-text--xs", "Pertinence non garantie"));
+  } else {
+    meta.append(el("span", "fr-tag fr-tag--sm", "Aucune source confirmée"));
+  }
+  body.append(meta);
+
+  if (claim.truncation_flagged) {
+    body.append(el("p", "hd-correction fr-mb-1w", "Troncature signalée sur ce passage."));
+  }
+
+  // Revue humaine (published == false) — remplace l'ancien badge emoji.
+  if (intent.published === false) {
+    body.append(el("p", "fr-badge fr-badge--sm hd-b--prudence fr-mb-1w", "Revue humaine requise — non publiable en l'état"));
+  }
+
+  const traceBtn = el("button", "fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-1w", "Traçabilité complète");
+  traceBtn.type = "button";
+  traceBtn.addEventListener("click", () => openTrace(intent, claim));
+  body.append(traceBtn);
+
+  sec.append(body);
+
+  // Comportement accordéon (piloté ici, pas par le JS DSFR).
+  btn.addEventListener("click", () => {
+    const open = btn.getAttribute("aria-expanded") === "true";
+    btn.setAttribute("aria-expanded", String(!open));
+    body.classList.toggle("hd-open", !open);
+    if (!open) flash(document.querySelector(`.hd-mark[data-claim="${it.uid}"]`));
+  });
+
+  return sec;
+}
+
+// --- Rendu d'un résultat de vérification -------------------------------------
 function renderResult(bubble, data) {
   bubble.innerHTML = "";
-  bubble.append(el("div", "whoami", "Sentinel Guard"));
+  bubble.append(el("div", "hd-msg__who", "Hallucide"));
 
   // Cas « moteur non connecté » : explicite, jamais de faux résultat.
   if (data.engine_connected === false) {
-    bubble.append(el("div", "banner warn",
-      "🔌 <b>Moteur non connecté.</b> " + escapeHtml(data.detail || data.error || "")));
+    bubble.append(alertBox("error", "Moteur non connecté.", data.detail || data.error || ""));
     return;
   }
-  // Erreur moteur (exception, source injoignable…)
   if (data.error) {
-    bubble.append(el("div", "banner err", "⚠️ " + escapeHtml(data.error)));
+    bubble.append(alertBox("error", "Erreur moteur.", data.error));
     return;
   }
 
   const intents = data.intents || [];
   if (!intents.length) {
-    bubble.append(el("div", "banner warn", "Aucune intention n'a pu être extraite de la question."));
+    bubble.append(alertBox("warning", "Aucune intention n'a pu être extraite de la question."));
     return;
   }
 
-  const intro = intents.length > 1
-    ? `${intents.length} intentions détectées — chacune vérifiée séparément :`
-    : "Vérification :";
-  bubble.append(el("p", null, intro));
+  const items = collectClaims(intents);
+  items.forEach((it) => { it.uid = `c${++uidCounter}`; });
 
-  const cov = coverageEl(data);
-  if (cov) bubble.append(cov);
+  if (items.length) {
+    bubble.append(proseEl(items));
+    bubble.append(summaryEl(items));
+    const group = el("div", "fr-accordions-group");
+    items.forEach((it) => group.append(accordionEl(it)));
+    bubble.append(group);
+  }
 
-  intents.forEach((it) => bubble.append(intentCard(it)));
+  // Intentions sans le moindre claim (NO_ANSWER) : dites explicitement.
+  intents.filter((i) => !(i.claims || []).length && !i.control_claim).forEach((i) => {
+    bubble.append(alertBox("info", "Aucune affirmation vérifiable produite.",
+      `« ${i.question} » — le système préfère se taire plutôt qu'inventer (NO_ANSWER).`));
+  });
 
+  // Couverture des intentions (si le backend la fournit)
+  if (data.coverage_ratio != null) {
+    const pct = Math.round(data.coverage_ratio * 100);
+    const cov = el("p", "fr-text--xs fr-mb-0", `Couverture des intentions : ${pct} %` +
+      (data.coverage_passed === false ? " — intention potentiellement oubliée" : ""));
+    bubble.append(cov);
+  }
   if (data.session_ref) {
-    bubble.append(el("div", "claim-meta", "Réf. session : " + escapeHtml(data.session_ref)));
+    bubble.append(el("p", "fr-text--xs fr-mb-0", "Réf. session : " + escapeHtml(data.session_ref)));
   }
   scrollBottom();
 }
 
-// --- Panneau de traçabilité -------------------------------------------------
+// --- Panneau de traçabilité ---------------------------------------------------
 const tracePanel = $("#trace");
 const traceBody = $("#trace-body");
 $("#trace-close").addEventListener("click", closeTrace);
-function closeTrace() { tracePanel.classList.remove("open"); tracePanel.setAttribute("aria-hidden", "true"); }
+function closeTrace() { tracePanel.classList.remove("hd-open"); tracePanel.setAttribute("aria-hidden", "true"); }
 
 function section(title, valueHtml) {
-  const s = el("div", "trace-section");
+  const s = el("div");
   s.append(el("h4", null, title));
-  s.append(el("div", "val", valueHtml));
+  s.append(el("div", null, valueHtml));
   return s;
 }
 
@@ -213,62 +323,57 @@ function openTrace(intent, claim) {
   $("#trace-title").textContent = claim ? "Traçabilité — affirmation" : "Traçabilité — intention";
 
   const score = (claim && claim.score) || intent.score || {};
-  // Score + explication
-  const sc = el("div", "trace-section");
+  const sc = el("div");
   sc.append(el("h4", null, "Score de présentation"));
-  const line = el("div", "val");
-  line.innerHTML = `<span class="badge band-${score.band}">${score.score} · ${bandLabel(score.band)}</span>`;
-  sc.append(line);
-  if (score.reason) sc.append(el("p", "claim-meta", escapeHtml(score.reason)));
-  sc.append(el("p", "claim-meta",
+  sc.append(el("div", null,
+    `<span class="fr-badge fr-badge--sm hd-b--${score.band || "risque"}">${score.score ?? "—"} · ${BAND_LABELS[score.band] || score.band || "?"}</span>`));
+  if (score.reason) sc.append(el("p", "fr-text--xs", escapeHtml(score.reason)));
+  sc.append(el("p", "fr-text--xs",
     "Rappel : ce chiffre est un habillage déterministe du statut du moteur, pas une nouvelle vérification."));
   traceBody.append(sc);
 
   if (claim) {
     traceBody.append(section("Affirmation vérifiée",
-      `${escapeHtml(claim.ref)}<br><span class="claim-meta">statut moteur : <b>${escapeHtml(claim.status)}</b>` +
+      `${escapeHtml(claim.ref)}<br><span class="fr-text--xs">statut moteur : <b>${escapeHtml(claim.status)}</b>` +
       (claim.verbatim_check ? ` · verbatim : ${escapeHtml(claim.verbatim_check)}` : "") +
-      (claim.truncation_flagged ? " · ⚠️ troncature" : "") + "</span>"));
+      (claim.truncation_flagged ? " · troncature signalée" : "") + "</span>"));
   }
 
-  // Passage source réel
   traceBody.append(section("Passage source récupéré (réel, non modifié)",
-    `<div class="source-text">${escapeHtml(intent.passage_text || "—")}</div>`));
+    `<div class="hd-source-text">${escapeHtml(intent.passage_text || "—")}</div>`));
 
-  // Métadonnées source
-  const chips = el("div", "kv");
-  const chip = (k, v) => { const c = el("div", "chip"); c.innerHTML = `${k} <b>${escapeHtml(v)}</b>`; return c; };
-  chips.append(chip("source_id", intent.source_id || "—"));
-  chips.append(chip("source_type", intent.source_type || "—"));
-  chips.append(chip("opposable", intent.opposable ? "oui" : "non"));
-  chips.append(chip("risque", intent.risk_tier || "—"));
-  chips.append(chip("compliance", intent.compliance_status || "—"));
-  chips.append(chip("verbatim", intent.verbatim_check || "—"));
-  if (intent.pertinence_non_garantie) chips.append(chip("pertinence", "non garantie"));
-  traceBody.append(section("Source", chips.outerHTML));
+  const chip = (k, v) => `<span class="hd-chip">${k} <b>${escapeHtml(v)}</b></span>`;
+  traceBody.append(section("Source",
+    `<div class="hd-kv">` +
+    chip("source_id", intent.source_id || "—") +
+    chip("source_type", intent.source_type || "—") +
+    chip("opposable", intent.opposable ? "oui" : "non") +
+    chip("risque", intent.risk_tier || "—") +
+    chip("compliance", intent.compliance_status || "—") +
+    chip("verbatim", intent.verbatim_check || "—") +
+    (intent.pertinence_non_garantie ? chip("pertinence", "non garantie") : "") +
+    `</div>`));
 
-  // Marquage intervention humaine + clés de validation
   if (intent.published === false) {
     const vk = intent.validation_key || {};
-    traceBody.append(section("🧑‍⚖️ Intervention humaine requise",
-      `<div class="human-flag" style="cursor:default">NON PUBLIABLE en l'état</div>` +
-      `<div class="kv" style="margin-top:8px">` +
-      `<div class="chip">intent_id <b>${escapeHtml(vk.intent_id || "—")}</b></div>` +
-      `<div class="chip">passage_hash <b>${escapeHtml((vk.passage_hash || "").slice(0, 16))}…</b></div>` +
+    traceBody.append(section("Revue humaine requise",
+      `<p class="fr-badge fr-badge--sm hd-b--prudence">Non publiable en l'état</p>` +
+      `<div class="hd-kv fr-mt-1w">` +
+      chip("intent_id", vk.intent_id || "—") +
+      chip("passage_hash", (vk.passage_hash || "").slice(0, 16) + "…") +
       `</div>` +
-      `<p class="claim-meta">La décision d'approbation/rejet se prend hors de cette interface, ` +
+      `<p class="fr-text--xs">La décision d'approbation/rejet se prend hors de cette interface, ` +
       `via le circuit de validation de l'institution (HumanValidationRegistry).</p>`));
   }
 
-  // Journal de conformité brut (repliable) — la preuve rejouable
   if (intent.compliance_json) {
-    const raw = el("details", "raw");
+    const raw = el("details", "hd-raw");
     raw.append(el("summary", null, "Journal de conformité (JSON rejouable, sans la question ni d'identité)"));
     raw.append(el("pre", null, escapeHtml(JSON.stringify(intent.compliance_json, null, 2))));
     traceBody.append(raw);
   }
 
-  tracePanel.classList.add("open");
+  tracePanel.classList.add("hd-open");
   tracePanel.setAttribute("aria-hidden", "false");
 }
 
@@ -289,20 +394,21 @@ function autoForm(detection) {
 // Formulaire interactif pour les routes qui ne s'auto-remplissent pas.
 function buildRouteForm(detection, message) {
   routeSlot.innerHTML = "";
-  const form = el("div", "route-form");
-  form.append(el("div", "claim-meta", `Route détectée : <b>${escapeHtml(detection.route)}</b> — ${escapeHtml(detection.reason || "")}`));
+  const form = el("div", "hd-route");
+  form.append(el("p", "fr-text--xs fr-mb-1w",
+    `Route détectée : <b>${escapeHtml(detection.route)}</b> — ${escapeHtml(detection.reason || "")}`));
 
   if (detection.route === "parlement_question") {
     const cands = detection.candidates || [];
     if (!cands.length) {
-      form.append(el("div", "banner warn", "Aucun candidat trouvé. Précisez le numéro ou reformulez."));
+      form.append(alertBox("warning", "Aucun candidat trouvé.", "Précisez le numéro ou reformulez."));
     } else {
-      form.append(el("div", "claim-meta", "Choisissez la question parlementaire :"));
-      const list = el("div", "candidates");
+      form.append(el("p", "fr-text--sm fr-mb-1w", "Choisissez la question parlementaire :"));
+      const list = el("div", "hd-cands");
       cands.forEach((c) => {
-        const b = el("button", "cand");
+        const b = el("button", "fr-btn fr-btn--secondary fr-btn--sm");
         b.type = "button";
-        b.innerHTML = `<b>${escapeHtml(c.type || "?")} ${escapeHtml(c.numero || "")}</b> — ${escapeHtml(c.titre || "")}`;
+        b.innerHTML = `<b>${escapeHtml(c.type || "?")} ${escapeHtml(c.numero || "")}</b>&nbsp;— ${escapeHtml(c.titre || "")}`;
         b.addEventListener("click", () => {
           routeSlot.innerHTML = "";
           runAsk(message, "parlement_question", { uid: c.uid });
@@ -312,21 +418,21 @@ function buildRouteForm(detection, message) {
       form.append(list);
     }
   } else if (detection.route === "donnee" || detection.route === "fichier") {
-    form.append(el("div", "claim-meta",
+    form.append(el("p", "fr-text--sm fr-mb-1w",
       "Route « donnée » : renseignez les identifiants data.gouv (dataset/ressource) et la cellule visée."));
     const fields = detection.route === "donnee"
       ? ["dataset_id", "resource_id", "filter_column", "filter_value", "target_column"]
       : ["dataset_id", "resource_id", "filters", "target_column"];
     const inputs = {};
     fields.forEach((f) => {
-      const lab = el("label", null, f);
-      const inp = el("input");
+      const lab = el("label", "fr-label", f);
+      const inp = el("input", "fr-input");
       inp.placeholder = f === "filters" ? '{"colonne": "valeur"}' : f;
       lab.append(inp);
       inputs[f] = inp;
       form.append(lab);
     });
-    const go = el("button", "btn btn-primary", "Vérifier cette donnée");
+    const go = el("button", "fr-btn fr-btn--sm fr-mt-1w", "Vérifier cette donnée");
     go.type = "button";
     go.addEventListener("click", () => {
       const f = {};
@@ -349,7 +455,7 @@ async function runAsk(message, route, form) {
     renderResult(bubble, data);
   } catch (e) {
     bubble.innerHTML = "";
-    bubble.append(el("div", "banner err", "Erreur réseau : " + escapeHtml(e.message)));
+    bubble.append(alertBox("error", "Erreur réseau.", e.message));
   }
 }
 
@@ -362,17 +468,15 @@ async function handleQuestion(message, forceForm) {
   const detection = await api("/resolve", { message });
   if (detection.error) {
     const b = addBotMsg();
-    b.append(el("div", "banner err", "Détection impossible : " + escapeHtml(detection.error)));
+    b.append(alertBox("error", "Détection impossible.", detection.error));
     return;
   }
 
   // Étape 2 : router.
   const form = autoForm(detection);
   if (form && !forceForm) {
-    // Route auto-remplissable → on vérifie directement.
     await runAsk(message, detection.route, form);
   } else {
-    // Route nécessitant un choix / des identifiants → formulaire.
     buildRouteForm(detection, message);
   }
 }
@@ -399,7 +503,8 @@ $("#detect").addEventListener("click", () => {
 // Message d'accueil
 window.addEventListener("DOMContentLoaded", () => {
   const b = addBotMsg();
-  b.append(el("p", null,
-    "Bonjour 👋 Posez une question juridique ou administrative. Je décompose, je récupère la source " +
-    "officielle réelle, et je vérifie chaque affirmation <b>mot pour mot</b>. Cliquez un résultat pour voir sa traçabilité complète."));
+  b.append(el("p", "fr-mb-0",
+    "Posez une question juridique ou administrative. Hallucide décompose la réponse, récupère la source " +
+    "officielle réelle et vérifie chaque affirmation <b>mot pour mot</b>. " +
+    "Cliquez une affirmation soulignée pour ouvrir sa vérification, ou « Traçabilité complète » pour la preuve détaillée."));
 });

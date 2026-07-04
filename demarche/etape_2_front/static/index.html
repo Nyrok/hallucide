@@ -1,33 +1,35 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-fr-scheme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sentinel Guard — vérification anti-hallucination</title>
+  <meta name="theme-color" content="#000091" />
+  <title>Hallucide — vérifier l'IA contre les sources officielles</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/dsfr.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/utility/utility.min.css" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <div class="app">
-    <!-- En-tête : identité + contrôles (modèle, auto-détection) -->
-    <header class="app-header">
-      <div class="logo">🛡️</div>
-      <div>
-        <h1>Sentinel Guard</h1>
-        <p class="subtitle">Le code prouve, pas le modèle — chaque affirmation vérifiée mot pour mot.</p>
+  <div class="hd-app">
+
+    <!-- En-tête sobre : identité + contrôles (pas de bloc-marque Marianne) -->
+    <header class="hd-header">
+      <div class="hd-header__brand">
+        <p class="hd-header__title">Hallucide</p>
+        <p class="hd-header__tagline">Vérifier l'IA contre les sources officielles — le code prouve, pas le modèle.</p>
       </div>
-      <div class="header-spacer"></div>
-      <div class="controls">
-        <!-- Les 3 providers sont reellement cables (ui/server.py::_MODEL_PROVIDERS).
-             Un modele sans cle dans .env affiche « moteur non connecte » : on ne
-             fait JAMAIS semblant d'utiliser un modele qu'on n'appelle pas. -->
-        <select id="model" class="model-select" title="Modèle de décomposition">
+      <div class="hd-header__controls">
+        <!-- Les 3 providers sont réellement câblés (ui/server.py::_MODEL_PROVIDERS).
+             Un modèle sans clé dans .env affiche « moteur non connecté » : on ne
+             fait JAMAIS semblant d'utiliser un modèle qu'on n'appelle pas. -->
+        <select id="model" class="fr-select" title="Modèle de décomposition">
           <option value="claude" selected>Claude</option>
           <option value="mistral">Mistral</option>
           <option value="gemini">Gemini</option>
         </select>
         <!-- Tri des candidats en recherche libre : pertinence (reranking
              lexical déterministe) ou date (le plus récent d'abord). -->
-        <select id="sort" class="model-select" title="Tri des résultats (recherche libre)">
+        <select id="sort" class="fr-select" title="Tri des résultats (recherche libre)">
           <option value="pertinence" selected>Plus pertinent</option>
           <option value="recent">Plus récent</option>
         </select>
@@ -35,28 +37,29 @@
     </header>
 
     <!-- Fil de conversation (rempli par app.js) -->
-    <main id="thread" class="thread" aria-live="polite"></main>
+    <main id="thread" class="hd-thread" aria-live="polite"></main>
 
     <!-- Saisie -->
-    <form id="composer" class="composer">
+    <form id="composer" class="hd-composer">
       <div id="route-slot"></div>
-      <div class="composer-row">
-        <textarea id="input" placeholder="Posez une question (ex. « Que dit l'article 1103 du code civil ? »)"
+      <div class="hd-composer__row">
+        <textarea id="input" class="fr-input"
+                  placeholder="Posez une question (ex. « Que dit l'article 1103 du code civil ? »)"
                   rows="1" autocomplete="off"></textarea>
-        <button type="button" id="detect" class="btn btn-ghost" title="Détecter la source automatiquement">🔎 Détecter la source</button>
-        <button type="submit" id="send" class="btn btn-primary">Vérifier</button>
+        <button type="button" id="detect" class="fr-btn fr-btn--secondary" title="Détecter la source automatiquement">Détecter la source</button>
+        <button type="submit" id="send" class="fr-btn">Vérifier</button>
       </div>
-      <p class="hint">Entrée = envoyer · Maj+Entrée = nouvelle ligne. Aucune réponse n'est simulée : si le moteur n'est pas connecté, l'interface le dit explicitement.</p>
+      <p class="fr-hint-text hd-composer__hint">Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne. Aucune réponse n'est simulée : si le moteur n'est pas connecté, l'interface le dit explicitement.</p>
     </form>
   </div>
 
-  <!-- Panneau latéral de traçabilité (ouvert au clic sur un claim/une intention) -->
-  <aside id="trace" class="trace-panel" aria-hidden="true">
-    <header>
-      <h3 id="trace-title">Traçabilité</h3>
-      <button class="close" id="trace-close" aria-label="Fermer">×</button>
+  <!-- Panneau latéral de traçabilité (ouvert au clic sur « Traçabilité complète ») -->
+  <aside id="trace" class="hd-trace" aria-hidden="true">
+    <header class="hd-trace__head">
+      <h3 id="trace-title" class="fr-h6 fr-mb-0">Traçabilité</h3>
+      <button class="fr-btn fr-btn--tertiary-no-outline fr-btn--sm" id="trace-close" aria-label="Fermer">Fermer</button>
     </header>
-    <div id="trace-body" class="trace-body"></div>
+    <div id="trace-body" class="hd-trace__body"></div>
   </aside>
 
   <script src="/static/app.js"></script>
