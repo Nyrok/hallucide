@@ -146,7 +146,7 @@ function summaryEl(items) {
   detail.append(breakdown);
   const ok = counts.verifie || 0, bad = counts.risque || 0;
   let phrase = `${ok} affirmation${ok > 1 ? "s" : ""} sur ${items.length} confirmée${ok > 1 ? "s" : ""} par une source officielle.`;
-  if (bad) phrase += ` <strong>${bad} non authentifiée${bad > 1 ? "s" : ""}</strong>, à ne pas diffuser en l'état.`;
+  if (bad) phrase += ` <strong>${bad} non authentifiée${bad > 1 ? "s" : ""}</strong>, à ne pas diffuser.`;
   detail.append(el("p", "fr-text--sm fr-mb-0", phrase));
   wrap.append(detail);
   return wrap;
@@ -203,7 +203,7 @@ function accordionEl(it) {
 
   if (control) {
     body.append(el("p", "fr-text--sm fr-mt-1w fr-mb-1w",
-      "Claim de contrôle : verbatim réel du passage source (aucune affirmation exploitable produite)."));
+      "Extrait de contrôle : texte réel du passage source, faute d'affirmation exploitable."));
   }
   if (claim.score?.label) {
     body.append(el("p", "fr-text--sm fr-mt-1w fr-mb-1w", escapeHtml(claim.score.label)));
@@ -218,7 +218,7 @@ function accordionEl(it) {
   const srcLabel = intent.titre || intent.source_id;
   if (srcLabel) {
     meta.append(el("span", "fr-tag fr-tag--sm", escapeHtml(srcLabel) +
-      (intent.source_type ? ` — ${escapeHtml(intent.source_type)}` : "")));
+      (intent.source_type ? ` (${escapeHtml(intent.source_type)})` : "")));
     meta.append(el("span", "fr-text--xs",
       intent.opposable ? "Source opposable" : "Source non opposable"));
     if (intent.pertinence_non_garantie) meta.append(el("span", "fr-text--xs", "Pertinence non garantie"));
@@ -233,7 +233,7 @@ function accordionEl(it) {
 
   // Revue humaine (published == false) — remplace l'ancien badge emoji.
   if (intent.published === false) {
-    body.append(el("p", "fr-badge fr-badge--sm hd-b--prudence fr-mb-1w", "Revue humaine requise — non publiable en l'état"));
+    body.append(el("p", "fr-badge fr-badge--sm hd-b--prudence fr-mb-1w", "Revue humaine requise, non publiable en l'état"));
   }
 
   const traceBtn = el("button", "fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-1w", "Traçabilité complète");
@@ -289,14 +289,14 @@ function renderResult(bubble, data) {
   // Intentions sans le moindre claim (NO_ANSWER) : dites explicitement.
   intents.filter((i) => !(i.claims || []).length && !i.control_claim).forEach((i) => {
     bubble.append(alertBox("info", "Aucune affirmation vérifiable produite.",
-      `« ${i.question} » — le système préfère se taire plutôt qu'inventer (NO_ANSWER).`));
+      `« ${i.question} » : le système ne répond pas plutôt que d'inventer (NO_ANSWER).`));
   });
 
   // Couverture des intentions (si le backend la fournit)
   if (data.coverage_ratio != null) {
     const pct = Math.round(data.coverage_ratio * 100);
     const cov = el("p", "fr-text--xs fr-mb-0", `Couverture des intentions : ${pct} %` +
-      (data.coverage_passed === false ? " — intention potentiellement oubliée" : ""));
+      (data.coverage_passed === false ? " (une intention a pu être oubliée)" : ""));
     bubble.append(cov);
   }
   if (data.session_ref) {
@@ -320,16 +320,16 @@ function section(title, valueHtml) {
 
 function openTrace(intent, claim) {
   traceBody.innerHTML = "";
-  $("#trace-title").textContent = claim ? "Traçabilité — affirmation" : "Traçabilité — intention";
+  $("#trace-title").textContent = claim ? "Traçabilité de l'affirmation" : "Traçabilité de l'intention";
 
   const score = (claim && claim.score) || intent.score || {};
   const sc = el("div");
   sc.append(el("h4", null, "Score de présentation"));
   sc.append(el("div", null,
-    `<span class="fr-badge fr-badge--sm hd-b--${score.band || "risque"}">${score.score ?? "—"} · ${BAND_LABELS[score.band] || score.band || "?"}</span>`));
+    `<span class="fr-badge fr-badge--sm hd-b--${score.band || "risque"}">${score.score ?? "?"} ${BAND_LABELS[score.band] || score.band || "?"}</span>`));
   if (score.reason) sc.append(el("p", "fr-text--xs", escapeHtml(score.reason)));
   sc.append(el("p", "fr-text--xs",
-    "Rappel : ce chiffre est un habillage déterministe du statut du moteur, pas une nouvelle vérification."));
+    "Ce chiffre traduit le statut établi par le moteur. Ce n'est pas une nouvelle vérification."));
   traceBody.append(sc);
 
   if (claim) {
@@ -396,7 +396,7 @@ function buildRouteForm(detection, message) {
   routeSlot.innerHTML = "";
   const form = el("div", "hd-route");
   form.append(el("p", "fr-text--xs fr-mb-1w",
-    `Route détectée : <b>${escapeHtml(detection.route)}</b> — ${escapeHtml(detection.reason || "")}`));
+    `Route détectée : <b>${escapeHtml(detection.route)}</b>. ${escapeHtml(detection.reason || "")}`));
 
   if (detection.route === "parlement_question") {
     const cands = detection.candidates || [];
@@ -408,7 +408,7 @@ function buildRouteForm(detection, message) {
       cands.forEach((c) => {
         const b = el("button", "fr-btn fr-btn--secondary fr-btn--sm");
         b.type = "button";
-        b.innerHTML = `<b>${escapeHtml(c.type || "?")} ${escapeHtml(c.numero || "")}</b>&nbsp;— ${escapeHtml(c.titre || "")}`;
+        b.innerHTML = `<b>${escapeHtml(c.type || "?")} ${escapeHtml(c.numero || "")}</b>&nbsp;: ${escapeHtml(c.titre || "")}`;
         b.addEventListener("click", () => {
           routeSlot.innerHTML = "";
           runAsk(message, "parlement_question", { uid: c.uid });
@@ -459,7 +459,7 @@ async function runAsk(message, route, form) {
   }
 }
 
-async function handleQuestion(message, forceForm) {
+async function handleQuestion(message) {
   addUserMsg(message);
   input.value = "";
   autoGrow();
@@ -474,7 +474,7 @@ async function handleQuestion(message, forceForm) {
 
   // Étape 2 : router.
   const form = autoForm(detection);
-  if (form && !forceForm) {
+  if (form) {
     await runAsk(message, detection.route, form);
   } else {
     buildRouteForm(detection, message);
@@ -493,18 +493,14 @@ input.addEventListener("keydown", (e) => {
 composer.addEventListener("submit", (e) => {
   e.preventDefault();
   const msg = input.value.trim();
-  if (msg) handleQuestion(msg, false);
+  if (msg) handleQuestion(msg);
 });
-$("#detect").addEventListener("click", () => {
-  const msg = input.value.trim();
-  if (msg) handleQuestion(msg, true); // force l'affichage du formulaire de route
-});
-
 // Message d'accueil
 window.addEventListener("DOMContentLoaded", () => {
   const b = addBotMsg();
   b.append(el("p", "fr-mb-0",
-    "Posez une question juridique ou administrative. Hallucide décompose la réponse, récupère la source " +
-    "officielle réelle et vérifie chaque affirmation <b>mot pour mot</b>. " +
-    "Cliquez une affirmation soulignée pour ouvrir sa vérification, ou « Traçabilité complète » pour la preuve détaillée."));
+    "Posez une question juridique ou administrative. Hallucide répond, puis vérifie chaque affirmation " +
+    "contre la source officielle, <b>mot pour mot</b>. " +
+    "Cliquez une affirmation soulignée pour voir sa vérification."));
+  autoGrow();
 });

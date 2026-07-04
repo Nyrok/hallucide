@@ -165,7 +165,7 @@ class Handler(BaseHTTPRequestHandler):
                 if isinstance(raw, dict) and "_API_KEY absente" in raw.get("error", ""):
                     result = {"engine_connected": False,
                               "error": "moteur non connecté",
-                              "detail": f"{raw['error']} — impossible d'appeler le moteur. "
+                              "detail": f"{raw['error']}. Impossible d'appeler le moteur. "
                                         "Aucun résultat n'est simulé (ce serait fatal pour un projet anti-hallucination)."}
                 else:
                     result = _enrich(raw)
@@ -179,7 +179,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     port = int(os.environ.get("WEBAPP_PORT", "8770"))
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"Sentinel-Guard — chat futuriste -> http://localhost:{port}  (Ctrl+C pour arrêter)")
+    print(f"Hallucide, front de chat : http://localhost:{port}  (Ctrl+C pour arrêter)")
     key = "présente" if os.environ.get("ANTHROPIC_API_KEY") else "ABSENTE (mode « moteur non connecté »)"
     print(f"ANTHROPIC_API_KEY (modèle par défaut : Claude) : {key}")
     try:

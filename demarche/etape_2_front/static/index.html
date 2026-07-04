@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#000091" />
-  <title>Hallucide — vérifier l'IA contre les sources officielles</title>
+  <title>Hallucide, vérification par les sources officielles</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/dsfr.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/utility/utility.min.css" />
   <link rel="stylesheet" href="/static/style.css" />
@@ -16,7 +16,7 @@
     <header class="hd-header">
       <div class="hd-header__brand">
         <p class="hd-header__title">Hallucide</p>
-        <p class="hd-header__tagline">Vérifier l'IA contre les sources officielles — le code prouve, pas le modèle.</p>
+        <p class="hd-header__tagline">Chaque affirmation est vérifiée contre la source officielle.</p>
       </div>
       <div class="hd-header__controls">
         <!-- Les 3 providers sont réellement câblés (ui/server.py::_MODEL_PROVIDERS).
@@ -44,12 +44,11 @@
       <div id="route-slot"></div>
       <div class="hd-composer__row">
         <textarea id="input" class="fr-input"
-                  placeholder="Posez une question (ex. « Que dit l'article 1103 du code civil ? »)"
-                  rows="1" autocomplete="off"></textarea>
-        <button type="button" id="detect" class="fr-btn fr-btn--secondary" title="Détecter la source automatiquement">Détecter la source</button>
+                  placeholder="Posez une question"
+                  rows="1" autocomplete="off">Liste-moi, avec les dates, les commissions où François Hollande a siégé depuis son mandat ?</textarea>
         <button type="submit" id="send" class="fr-btn">Vérifier</button>
       </div>
-      <p class="fr-hint-text hd-composer__hint">Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne. Aucune réponse n'est simulée : si le moteur n'est pas connecté, l'interface le dit explicitement.</p>
+      <p class="fr-hint-text hd-composer__hint">Entrée pour envoyer, Maj+Entrée pour aller à la ligne. Rien n'est simulé : si le moteur n'est pas connecté, l'interface le dit.</p>
     </form>
   </div>
 
