@@ -300,6 +300,18 @@ function accordionEl(it) {
   }
   body.append(meta);
 
+  if (!srcLabel) {
+    const bases = el("div", "fr-text--xs fr-pb-1w");
+    bases.innerHTML = "Bases officielles interrogées sans résultat :" +
+      "<ul class=\"fr-mb-0\">" +
+      "<li>Codes et textes consolidés (Légifrance)</li>" +
+      "<li>Questions parlementaires (QE, QG, QOSD, Assemblée nationale et Sénat)</li>" +
+      "<li>Annuaire des acteurs : mandats et commissions (open data Assemblée nationale)</li>" +
+      "<li>Données tabulaires data.gouv.fr</li>" +
+      "</ul>";
+    body.append(bases);
+  }
+
   if (claim.truncation_flagged) {
     body.append(el("p", "hd-correction fr-mb-1w", "Troncature signalée sur ce passage."));
   }
@@ -403,8 +415,8 @@ function renderResult(bubble, data) {
       "Afficher la réponse rédigée");
     proseBtn.type = "button";
     proseBtn.addEventListener("click", () => {
-      const hidden = prose.classList.toggle("hd-hidden");
-      proseBtn.textContent = hidden ? "Afficher la réponse rédigée" : "Masquer la réponse rédigée";
+      prose.classList.remove("hd-hidden");
+      proseBtn.remove();
     });
     bubble.append(proseBtn, prose);
 
