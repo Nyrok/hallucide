@@ -177,8 +177,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    host = os.environ.get("WEBAPP_HOST", "127.0.0.1")
     port = int(os.environ.get("WEBAPP_PORT", "8770"))
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = ThreadingHTTPServer((host, port), Handler)
     print(f"Hallucide, front de chat : http://localhost:{port}  (Ctrl+C pour arrêter)")
     key = "présente" if os.environ.get("ANTHROPIC_API_KEY") else "ABSENTE (mode « moteur non connecté »)"
     print(f"ANTHROPIC_API_KEY (modèle par défaut : Claude) : {key}")
