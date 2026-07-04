@@ -339,6 +339,14 @@ function sourceUrl(intent) {
   if (/^PA\d+$/.test(id)) return `https://www.assemblee-nationale.fr/dyn/deputes/${id}`;
   if (/^LEGIARTI\d+$/.test(id)) return `https://www.legifrance.gouv.fr/codes/article_lc/${id}`;
   if (/^LEGITEXT\d+$/.test(id)) return `https://www.legifrance.gouv.fr/codes/texte_lc/${id}`;
+  // Questions parlementaires AN : QANR5L17QE6750 -> q17/17-6750QE.htm
+  let m = /^QANR\d+L(\d+)(QE|QG|QOSD)(\d+)$/.exec(id);
+  if (m) return `https://questions.assemblee-nationale.fr/q${m[1]}/${m[1]}-${m[3]}${m[2]}.htm`;
+  // Questions du Sénat : SEQ26050874G -> base/2026/qSEQ26050874G.html
+  m = /^SEQ(\d{2})/.exec(id);
+  if (m) return `https://www.senat.fr/questions/base/20${m[1]}/q${id}.html`;
+  // Acteur non résolu (« Aucun mandat trouvé ») : annuaire officiel des députés
+  if (/^acteur:/.test(id)) return "https://www.assemblee-nationale.fr/dyn/vos-deputes";
   return null;
 }
 
