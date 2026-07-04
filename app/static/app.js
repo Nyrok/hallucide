@@ -375,15 +375,24 @@ function renderResult(bubble, data) {
   items.forEach((it) => { it.uid = `c${++uidCounter}`; });
 
   if (items.length) {
-    // Réponse brute (prose annotée) masquée par défaut.
-    const prose = proseEl(items);
+    // Réponse rédigée par le LLM depuis les seules lignes vérifiées
+    // (answer_text), repli sur la prose annotée. Masquée par défaut.
+    let prose;
+    if (data.answer_text) {
+      prose = el("div", "hd-response");
+      data.answer_text.split(/\n{2,}/).forEach((par) => {
+        prose.append(el("p", "fr-mb-1w", escapeHtml(par).replace(/\n/g, "<br>")));
+      });
+    } else {
+      prose = proseEl(items);
+    }
     prose.classList.add("hd-hidden");
     const proseBtn = el("button", "fr-btn fr-btn--tertiary-no-outline fr-btn--sm fr-mb-1w",
-      "Afficher la réponse brute");
+      "Afficher la réponse rédigée");
     proseBtn.type = "button";
     proseBtn.addEventListener("click", () => {
       const hidden = prose.classList.toggle("hd-hidden");
-      proseBtn.textContent = hidden ? "Afficher la réponse brute" : "Masquer la réponse brute";
+      proseBtn.textContent = hidden ? "Afficher la réponse rédigée" : "Masquer la réponse rédigée";
     });
     bubble.append(proseBtn, prose);
 

@@ -53,7 +53,7 @@ if _env_path.exists():
             os.environ.setdefault(_k.strip(), _v.strip())
 
 # Réutilisation directe du démonstrateur historique (source de vérité moteur).
-from ui.server import _run_pipeline, detect_route, resolve_parlement_uid  # noqa: E402
+from ui.server import _run_pipeline, detect_route, resolve_parlement_uid, _build_model_provider  # noqa: E402
 
 from app import presentation  # noqa: E402
 
@@ -97,6 +97,38 @@ def _enrich(result: dict) -> dict:
 
     result["engine_connected"] = True
     return result
+
+
+def _format_answer(result: dict, message: str, model: str) -> None:
+    """Rédige une réponse en prose via le LLM, UNIQUEMENT à partir des claims
+    vérifiés déjà présents dans le résultat. Le LLM ne vérifie rien et ne peut
+    rien ajouter : il met en forme des lignes déjà contrôlées par le moteur.
+    Champ ajouté : result["answer_text"]. En cas d'échec, champ absent, le
+    front garde l'affichage ligne à ligne (jamais de blocage du résultat)."""
+    lines = []
+    for intent in result.get("intents", []):
+        for claim in intent.get("claims", []):
+            statut = claim.get("status", "")
+            lines.append(f"- [{statut}] {claim.get('ref', '')}")
+    if not lines:
+        return
+    provider, err = _build_model_provider(model)
+    if err:
+        return
+    try:
+        out = provider.generate([
+            {"role": "system", "content":
+                "Tu mets en forme des données déjà vérifiées. Rédige en français une réponse "
+                "claire et professionnelle à la question, en utilisant UNIQUEMENT les lignes "
+                "fournies. N'ajoute aucun fait, aucune date, aucun nom qui n'y figure pas. "
+                "Ordre chronologique décroissant (le plus récent d'abord). Pas de tiret cadratin."},
+            {"role": "user", "content": f"Question : {message}\n\nDonnées vérifiées :\n" + "\n".join(lines[:120])},
+        ])
+        text = (out or {}).get("text", "").strip()
+        if text:
+            result["answer_text"] = text
+    except Exception:
+        pass  # mise en forme facultative : jamais bloquante
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -169,6 +201,7 @@ class Handler(BaseHTTPRequestHandler):
                                         "Aucun résultat n'est simulé (ce serait fatal pour un projet anti-hallucination)."}
                 else:
                     result = _enrich(raw)
+                    _format_answer(result, payload.get("message", ""), payload.get("model", "claude"))
         except Exception as exc:  # défensif : jamais de 500 opaque au front
             result = {"engine_connected": True, "error": f"{type(exc).__name__}: {exc}",
                       "trace": traceback.format_exc()}
