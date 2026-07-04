@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 WORKSPACE = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(WORKSPACE / "src"))
+
 
 # Charger .env (MISTRAL_API_KEY).
 env_path = WORKSPACE / ".env"

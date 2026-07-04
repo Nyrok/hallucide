@@ -16,3 +16,4 @@ venv/
 # Editor
 .vscode/*
 !.vscode/settings.json
+src/*.egg-info/

@@ -22,7 +22,7 @@ def load_env_file(path: Path) -> None:
 
 load_env_file(workspace_root / ".env")
 
-sys.path.insert(0, str(workspace_root / "src"))
+sys.path.insert(0, str(workspace_root))
 
 from hallucide import (
     GeminiModelProvider,

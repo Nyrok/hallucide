@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 workspace_root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(workspace_root / "src"))
+sys.path.insert(0, str(workspace_root))
 
 from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider
 from hallucide.core_types.types import Intent, RetrievalState

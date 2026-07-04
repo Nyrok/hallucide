@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 workspace_root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(workspace_root / "src"))
+sys.path.insert(0, str(workspace_root))
 
 from hallucide import MockModelProvider, MultiSourceRetrievalProvider, Hallucide
 from hallucide._6_validation.human_validation import ValidationDecision, ValidationKey

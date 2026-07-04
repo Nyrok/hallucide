@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 workspace_root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(workspace_root / "src"))
+sys.path.insert(0, str(workspace_root))
 
 from hallucide.analysis.measurement import run_document_measurement, run_measurement, run_triage_measurement
 from hallucide.analysis.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET

@@ -39,7 +39,7 @@ for _parent in WORKSPACE.parents:
         WORKSPACE = _parent
         break
 # Le moteur vit dans src/ ; ui/ est un package de voisinage qu'on réutilise.
-for p in (str(WORKSPACE / "src"), str(WORKSPACE)):
+for p in (str(WORKSPACE),):
     if p not in sys.path:
         sys.path.insert(0, p)
 

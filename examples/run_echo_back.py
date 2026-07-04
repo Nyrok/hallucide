@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 workspace_root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(workspace_root / "src"))
+sys.path.insert(0, str(workspace_root))
 
 from hallucide._1_decomposition.orchestration import Orchestrator
 from hallucide._5_triage.triage import RiskTier

@@ -2,7 +2,7 @@
 name = "hallucide"
 version = "0.1.0"
 description = "Core pipeline for deterministic source fidelity verification and retrieval orchestration."
-authors = [{name = "Sentinel Guard Team", email = "team@example.com"}]
+authors = [{name = "Equipe Hallucide"}]
 requires-python = ">=3.11"
 license = {text = "MIT"}
 readme = "README.md"
@@ -21,5 +21,20 @@ litellm = ["litellm>=1.90,<2", "truststore>=0.9"]
 requires = ["setuptools>=61.0","wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools.package-dir]
+hallucide = "src"
+
+[tool.setuptools]
+packages = [
+    "hallucide",
+    "hallucide._1_decomposition",
+    "hallucide._2_coverage",
+    "hallucide._3_retrieval",
+    "hallucide._4_verification",
+    "hallucide._5_triage",
+    "hallucide._6_validation",
+    "hallucide._7_audit",
+    "hallucide.analysis",
+    "hallucide.core_types",
+    "hallucide.llm_providers",
+]
