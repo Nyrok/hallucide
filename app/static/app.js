@@ -214,6 +214,25 @@ function proseEl(items) {
 function accordionEl(it) {
   const { intent, claim, control } = it;
   const band = claim.score?.band || "risque";
+
+  // Donnée tracée datée : pas de liste déroulante. Une ligne plate avec badge,
+  // texte lisible et lien externe vers le document officiel renvoyé par le MCP.
+  const flat = parseClaim(claim.ref);
+  if (flat) {
+    const row = el("div", `hd-flat hd-claim--${band}`);
+    row.dataset.claim = it.uid;
+    let html = `<span class="fr-badge fr-badge--sm hd-b--${band}">${BAND_LABELS[band] || band}` +
+      (claim.score?.score != null ? ` ${claim.score.score}` : "") + `</span> ` +
+      escapeHtml(flat.display);
+    const url = sourceUrl(intent);
+    if (url) {
+      html += ` <a class="fr-link fr-link--sm fr-icon-external-link-line fr-link--icon-right"
+        href="${url}" target="_blank" rel="noopener">source</a>`;
+    }
+    row.innerHTML = html;
+    return row;
+  }
+
   const sec = el("section", `fr-accordion hd-acc hd-claim--${band}`);
   sec.dataset.claim = it.uid;
 
