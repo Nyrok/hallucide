@@ -35,6 +35,13 @@ def _strip_html(raw: Any) -> str:
     return _WS_RE.sub(" ", text).strip()
 
 
+def _date_seule(raw: Any) -> str | None:
+    """« 2022-07-12T00:00:00+02:00 » -> « 2022-07-12 ». None si vide."""
+    if not raw or not isinstance(raw, str):
+        return None
+    return raw.split("T", 1)[0]
+
+
 def _hit_title(hit: dict[str, Any]) -> str:
     return (hit.get("document") or {}).get("autocompletion") or ""
 
@@ -185,10 +192,81 @@ class MoulineuseRetrievalProvider:
             return self._retrieve_parlement_question(query)
         if route == "amendement":
             return self._retrieve_amendement(query)
+        if route == "commissions":
+            return self._retrieve_commissions(query)
         raise RetrievalError(
             f"Unknown or missing route '{route}'; expected 'pastille', 'code_article', "
-            "'texte_libre', 'parlement_question' or 'amendement'."
+            "'texte_libre', 'parlement_question', 'amendement' or 'commissions'."
         )
+
+    # SQL (recette Tricoteuses) : les mandats sont dans acteurs.data->'mandats',
+    # chaque mandat porte organesRefs + dateDebut/dateFin ; on joint organes pour
+    # le libellé et on ne garde que les commissions (libellé « Commission … »).
+    _COMMISSIONS_SQL = """
+        SELECT DISTINCT
+               o.data->>'libelle' AS libelle,
+               o.data->>'codeType' AS code_type,
+               m->>'dateDebut' AS date_debut,
+               m->>'dateFin' AS date_fin
+        FROM assemblee.acteurs a
+        CROSS JOIN LATERAL jsonb_array_elements(a.data->'mandats') AS m
+        CROSS JOIN LATERAL jsonb_array_elements_text(m->'organesRefs') AS oref
+        JOIN assemblee.organes o ON o.uid = oref
+        WHERE a.uid = $1
+          AND lower(o.data->>'libelle') LIKE 'commission%'
+        ORDER BY date_debut;
+    """
+
+    def _retrieve_commissions(self, query: dict[str, str]) -> Passage:
+        # Appartenances aux commissions d'un député, avec dates (open data
+        # Assemblée). Acte administratif -> opposable=False (CITÉ_NON_OPPOSABLE) :
+        # on prouve « cette appartenance figure exactement dans la donnée
+        # officielle », jamais une autorité normative.
+        acteur = query.get("acteur")
+        acteur_ref = query.get("acteur_ref") or (self._resolve_acteur(acteur) if acteur else None)
+        if not acteur_ref:
+            raise RetrievalError(f"Député introuvable : « {acteur or ''} ».")
+
+        result = self.client.call_tool(
+            "query_sql", {"schema": "assemblee", "query": self._COMMISSIONS_SQL, "params": [acteur_ref]}
+        )
+        rows = _parse_sql_rows(result)
+        lignes: list[str] = []
+        for r in rows:
+            libelle = (r.get("libelle") or "").strip()
+            if not libelle:
+                continue
+            debut = _date_seule(r.get("date_debut")) or "?"
+            fin = _date_seule(r.get("date_fin")) or "en cours"
+            lignes.append(f"{libelle} — du {debut} au {fin}")
+        lignes = list(dict.fromkeys(lignes))
+        if not lignes:
+            raise RetrievalError(f"Aucune appartenance à une commission trouvée pour l'acteur {acteur_ref}.")
+
+        return Passage(
+            source_id=str(acteur_ref),
+            source_type="mandat",
+            opposable=False,  # acte administratif, pas texte normatif (§6ter)
+            text="\n".join(lignes),
+            metadata={
+                "acteur": acteur or "",
+                "acteur_ref": acteur_ref,
+                "nb_commissions": len(lignes),
+                "source": "Open data Assemblée nationale (mandats)",
+            },
+        )
+
+    def _resolve_acteur(self, name: str) -> str | None:
+        """Nom -> uid acteur via nom_complet (recette Tricoteuses)."""
+        rows = _parse_sql_rows(
+            self.client.call_tool(
+                "query_sql",
+                {"schema": "assemblee",
+                 "query": "SELECT uid FROM assemblee.acteurs WHERE nom_complet ILIKE $1 ORDER BY nom_complet LIMIT 1",
+                 "params": [f"%{name}%"]},
+            )
+        )
+        return rows[0].get("uid") if rows else None
 
     def _retrieve_amendement(self, query: dict[str, str]) -> Passage:
         # Amendement parlementaire (assemblee.amendements) : le DISPOSITIF est le

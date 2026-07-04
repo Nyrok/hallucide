@@ -51,6 +51,8 @@ _INTERVENTION_HINTS = ("compte rendu", "compte-rendu", "en séance", "en seance"
 # « M. Gérald Darmanin ». On garde 1 à 3 mots capitalisés.
 _ORATEUR_RE = re.compile(r"(?:M\.|Mme|monsieur|madame|de|du|par)\s+"
                          r"([A-ZÀ-Ÿ][\wÀ-ÿ'’-]+(?:\s+[A-ZÀ-Ÿ][\wÀ-ÿ'’-]+){0,2})")
+# Nom complet d'un député (au moins prénom + nom capitalisés) : « Gabriel Attal ».
+_NOM_DEPUTE_RE = re.compile(r"\b([A-ZÀ-Ÿ][a-zà-ÿ'’-]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿ'’-]+)+)")
 # « L. 1232-6 » : préfixe L/R/D avec point et espace optionnels devant le
 # numéro -- sans cette alternative, la capture s'arrêtait à « L. ».
 # Accepte « article », « articles », « art. » et « art » (abréviations
@@ -105,6 +107,14 @@ def detect_route(question: str) -> dict:
         code_name = _CODE_BREAK_RE.sub("", code.group(1)).strip()
         return {"route": "code_article", "reason": "Référence 'article … du code …' détectée",
                 "prefill": {"article": art.group(1).rstrip(".,;"), "code": "code " + code_name}}
+
+    # 1bis. Commissions d'un député (+ dates) : « les commissions où X a siégé /
+    #    appartenu », « liste les commissions de X ». Donnée structurée SQL, sûre.
+    if "commission" in low:
+        nom = _NOM_DEPUTE_RE.search(q)
+        if nom:
+            return {"route": "commissions", "reason": "Appartenances aux commissions d'un député (open data)",
+                    "prefill": {"acteur": nom.group(1)}}
 
     # 2. Intervention en séance / compte rendu : « qu'a dit X », « position de X
     #    sur … » -- AVANT l'amendement, car ces questions veulent le VERBATIM
@@ -227,6 +237,8 @@ def _build_query(route: str, form: dict) -> dict:
         if form.get("orateur"):
             q["orateur"] = form["orateur"]
         return q
+    if route == "commissions":
+        return {"route": "commissions", "acteur": form.get("acteur", "").strip()}
     if route == "texte_libre":
         raw_query = form.get("query", "").strip().strip("\"“”«»").strip()
         sort = form.get("sort", "pertinence")
