@@ -55,7 +55,27 @@ _INTERVENTION_HINTS = ("compte rendu", "compte-rendu", "en séance", "en seance"
 _ORATEUR_RE = re.compile(r"(?:M\.|Mme|monsieur|madame|de|du|par)\s+"
                          r"([A-ZÀ-Ÿ][\wÀ-ÿ'’-]+(?:\s+[A-ZÀ-Ÿ][\wÀ-ÿ'’-]+){0,2})")
 # Nom complet d'un député (au moins prénom + nom capitalisés) : « Gabriel Attal ».
-_NOM_DEPUTE_RE = re.compile(r"\b([A-ZÀ-Ÿ][a-zà-ÿ'’-]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿ'’-]+)+)")
+# Classes latines PROPRES : majuscules A-Z + À-Þ (sauf ×), minuscules a-z + à-ÿ
+# (sauf ÷). Sans ça, [À-Ÿ] engloberait les minuscules accentuées (é, è…) et
+# capturerait « François Hollande était-il ».
+_MAJ = "A-ZÀ-ÖØ-Þ"
+_MIN = "a-zà-öø-ÿ"
+_NOM_DEPUTE_RE = re.compile(rf"\b([{_MAJ}][{_MIN}'’-]+(?:\s+[{_MAJ}][{_MIN}'’-]+)+)")
+# Commission NOMMÉE (question ciblée) : « la commission des affaires sociales ».
+# Le « commission » SINGULIER + article distingue du listing (« commissionS où »).
+_COMMISSION_CIBLE_RE = re.compile(
+    r"\bcommission\s+(?:des?|du|de\s+l['’]|d['’]|de)\s+([^?.,;!]+)", re.IGNORECASE)
+_COMMISSION_CIBLE_STOP = re.compile(
+    r"\s+(?:depuis|avant|entre|pendant|durant|pour|en|au|à)\b.*$", re.IGNORECASE)
+
+
+def _extract_commission_cible(q: str) -> str:
+    """Descripteur de la commission nommée (« affaires sociales »), ou '' si la
+    question est un simple listing (« les commissions où … »)."""
+    m = _COMMISSION_CIBLE_RE.search(q)
+    if not m:
+        return ""
+    return _COMMISSION_CIBLE_STOP.sub("", m.group(1).strip()).strip()
 # « L. 1232-6 » : préfixe L/R/D avec point et espace optionnels devant le
 # numéro -- sans cette alternative, la capture s'arrêtait à « L. ».
 # Accepte « article », « articles », « art. » et « art » (abréviations
@@ -116,8 +136,12 @@ def detect_route(question: str) -> dict:
     if "commission" in low:
         nom = _NOM_DEPUTE_RE.search(q)
         if nom:
+            prefill = {"acteur": nom.group(1)}
+            cible = _extract_commission_cible(q)
+            if cible:
+                prefill["commission"] = cible
             return {"route": "commissions", "reason": "Appartenances aux commissions d'un député (open data)",
-                    "prefill": {"acteur": nom.group(1)}}
+                    "prefill": prefill}
 
     # 2. Intervention en séance / compte rendu : « qu'a dit X », « position de X
     #    sur … » -- AVANT l'amendement, car ces questions veulent le VERBATIM
@@ -241,7 +265,10 @@ def _build_query(route: str, form: dict) -> dict:
             q["orateur"] = form["orateur"]
         return q
     if route == "commissions":
-        return {"route": "commissions", "acteur": form.get("acteur", "").strip()}
+        q = {"route": "commissions", "acteur": form.get("acteur", "").strip()}
+        if form.get("commission"):
+            q["commission"] = form["commission"].strip()
+        return q
     if route == "texte_libre":
         raw_query = form.get("query", "").strip().strip("\"“”«»").strip()
         sort = form.get("sort", "pertinence")

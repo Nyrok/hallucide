@@ -74,6 +74,36 @@ def test_commissions_no_membership_raises():
         assert "Aucune appartenance" in str(e)
 
 
+def _rows_hollande():
+    return [
+        {"libelle": "Commission de la défense nationale et des forces armées", "code_type": "COMPER",
+         "date_debut": "2002-06-26T00:00:00+02:00", "date_fin": "2007-06-19T00:00:00+02:00"},
+        {"libelle": "Commission des affaires sociales", "code_type": "COMPER",
+         "date_debut": "2012-02-11T00:00:00+01:00", "date_fin": "2012-02-20T00:00:00+01:00"},
+        {"libelle": "Commission des finances, de l'économie générale", "code_type": "COMPER",
+         "date_debut": "2009-07-01T00:00:00+02:00", "date_fin": None},
+    ]
+
+
+def test_commissions_targeted_question_yes():
+    prov = MoulineuseRetrievalProvider(client=FakeClient(commission_rows=_rows_hollande()))
+    p = prov.retrieve(_intent(), RetrievalState(),
+                      {"route": "commissions", "acteur_ref": "PA1", "commission": "affaires sociales"})
+    assert p.metadata["reponse"] == "oui"
+    assert p.text == "Commission des affaires sociales — du 2012-02-11 au 2012-02-20"
+    assert p.metadata["nb_total"] == 3   # la liste complète reste en traçabilité
+
+
+def test_commissions_targeted_question_no():
+    prov = MoulineuseRetrievalProvider(
+        client=FakeClient(uid_rows=[{"uid": "PA1"}], commission_rows=_rows_hollande()))
+    p = prov.retrieve(_intent(), RetrievalState(),
+                      {"route": "commissions", "acteur": "François Hollande", "commission": "culture"})
+    assert p.metadata["reponse"] == "non"
+    assert "Aucune appartenance" in p.text
+    assert "culture" in p.text
+
+
 def test_commissions_deduplicates_lines():
     rows = [
         {"libelle": "Commission des lois", "code_type": "COMPER",
