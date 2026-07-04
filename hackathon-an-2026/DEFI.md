@@ -61,6 +61,7 @@ Cochez les ressources utilisées en remplaçant `[ ]` par `[x]`.
 - [Image 2](images/image-2.png)
 
 ### Documents
+- [Avant / après : des réponses non vérifiées aux réponses sourcées](docs/avant-apres-reponses-non-verifiees.pdf)
 - [Présentation Hallucide](docs/presentation-hallucide.pdf)
 - [Spécification du moteur](docs/specification-moteur.pdf)
 - [Statut d'implémentation](docs/statut-implementation.pdf)
