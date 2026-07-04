@@ -1,13 +1,13 @@
 # DEFI.md
 
 ### Nom du défi
-Hallucide
+IA et Hallucination
 
 ### Description courte
 Hallucide vérifie les réponses d'une IA générative contre les sources officielles du Parlement. Chaque affirmation est confrontée mot pour mot au passage source et affichée annotée : vérifiée, tracée, prudence ou risque.
 
 ### Porteur
-Équipe Hallucide
+Hamza Konte
 
 ### Description longue
 Les IA génératives produisent des réponses inexactes ou non sourcées, et hallucinent jusqu'à leurs propres justifications. En contexte institutionnel, distinguer une information vérifiée d'un contenu généré est difficile.
