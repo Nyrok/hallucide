@@ -8,7 +8,10 @@ PY := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
 run: frontend   ## `make` = démarre le front de chat (http://localhost:8770)
 
 stop:  ## Arrête un serveur front déjà lancé (libère le port)
-	@pkill -f "demarche.etape_2_front.server" 2>/dev/null && echo "✅ ancien serveur arrêté" || echo "aucun serveur à arrêter"
+	@# Motif « [d]emarche… » : matche le process python, JAMAIS la ligne de
+	@# commande du pkill lui-même (sinon pkill tue son propre shell -> make
+	@# s'interrompt et le site ne se lance pas).
+	@pkill -f "[d]emarche.etape_2_front.server" 2>/dev/null && echo "✅ ancien serveur arrêté" || echo "aucun serveur à arrêter"
 
 frontend: stop  ## Front de chat futuriste (Claude par défaut)
 	@echo "→ http://localhost:8770  (Ctrl+C pour arrêter)"
