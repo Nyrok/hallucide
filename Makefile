@@ -1,15 +1,19 @@
 # `make` tout court = lance la démo (front de chat). Voir `make help`.
 .DEFAULT_GOAL := run
-.PHONY: run help setup test frontend ui clean
+.PHONY: run help setup test frontend ui clean stop
 
 # Python à utiliser : le .venv du projet s'il existe, sinon python3 système.
 PY := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
 
 run: frontend   ## `make` = démarre le front de chat (http://localhost:8770)
 
-frontend:  ## Front de chat futuriste (Claude par défaut)
+stop:  ## Arrête un serveur front déjà lancé (libère le port)
+	@pkill -f "demarche.etape_2_front.server" 2>/dev/null && echo "✅ ancien serveur arrêté" || echo "aucun serveur à arrêter"
+
+frontend: stop  ## Front de chat futuriste (Claude par défaut)
 	@echo "→ http://localhost:8770  (Ctrl+C pour arrêter)"
 	@echo "  (clé : ANTHROPIC_API_KEY dans .env ; sinon « moteur non connecté »)"
+	@sleep 1
 	$(PY) -m demarche.etape_2_front.server
 
 ui:  ## Démonstrateur historique (http://localhost:8765)
