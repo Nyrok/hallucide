@@ -4,7 +4,8 @@ visualiser le pipeline Sentinel-Guard en direct : question -> décomposition
 déterministe -> statut coloré + journal de conformité.
 
 Lancement :  python ui/server.py     puis ouvrir http://localhost:8765
-Nécessite MISTRAL_API_KEY dans .env (à la racine du projet).
+Nécessite une clé LLM dans .env (par défaut ANTHROPIC_API_KEY pour Claude ;
+MISTRAL_API_KEY / GEMINI_API_KEY aussi supportées).
 """
 from __future__ import annotations
 
@@ -29,7 +30,7 @@ if env_path.exists():
 
 import re  # noqa: E402
 
-from sentinel_guard import MistralModelProvider, SentinelGuard  # noqa: E402
+from sentinel_guard import ClaudeModelProvider, GeminiModelProvider, MistralModelProvider, SentinelGuard  # noqa: E402
 from sentinel_guard.core_types.exceptions import RetrievalError, SentinelGuardError, VerificationError  # noqa: E402
 from sentinel_guard._3_retrieval.mcp_client import McpToolClient  # noqa: E402
 from sentinel_guard.core_types.types import Claim, ClaimStatus  # noqa: E402
@@ -209,14 +210,41 @@ def _build_query(route: str, form: dict) -> dict:
     raise ValueError(f"Route inconnue : {route}")
 
 
-def _run_pipeline(message: str, route: str, form: dict) -> dict:
-    """Exécute le pipeline réel et renvoie un dict JSON-sérialisable pour l'UI."""
-    api_key = os.environ.get("MISTRAL_API_KEY")
-    if not api_key:
-        return {"error": "MISTRAL_API_KEY absente du .env"}
+# Providers LLM disponibles : (variable d'environnement de la clé, constructeur).
+# Défaut = Claude (Anthropic). Ajouter un modèle = une ligne ici.
+_MODEL_PROVIDERS = {
+    "claude": ("ANTHROPIC_API_KEY", ClaudeModelProvider),
+    "mistral": ("MISTRAL_API_KEY", MistralModelProvider),
+    "gemini": ("GEMINI_API_KEY", GeminiModelProvider),
+}
+DEFAULT_MODEL = "claude"
 
-    model = MistralModelProvider(api_key=api_key)
-    guard = SentinelGuard(model_provider=model)
+
+def _build_model_provider(model: str):
+    """Instancie le provider LLM choisi. Renvoie (provider, None) ou
+    (None, message d'erreur « ...API_KEY absente du .env ») si la clé manque —
+    ce message déclenche le verrou « moteur non connecté » côté UI."""
+    name = (model or DEFAULT_MODEL).lower()
+    entry = _MODEL_PROVIDERS.get(name)
+    if entry is None:
+        return None, f"Modèle inconnu : {model}"
+    env_var, provider_cls = entry
+    key = os.environ.get(env_var)
+    if not key:
+        return None, f"{env_var} absente du .env"
+    return provider_cls(api_key=key), None
+
+
+def _run_pipeline(message: str, route: str, form: dict, model: str = DEFAULT_MODEL) -> dict:
+    """Exécute le pipeline réel et renvoie un dict JSON-sérialisable pour l'UI.
+
+    `model` choisit le provider LLM (défaut : Claude) ; les autres (Mistral,
+    Gemini) restent disponibles pour le futur sélecteur de modèle."""
+    provider, err = _build_model_provider(model)
+    if err:
+        return {"error": err}
+
+    guard = SentinelGuard(model_provider=provider)
     query = _build_query(route, form)
 
     try:
