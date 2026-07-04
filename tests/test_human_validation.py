@@ -1,4 +1,4 @@
-from hallucide._6_validation.human_validation import (
+from hallucide.validation.human_validation import (
     HumanValidationRegistry,
     ValidationDecision,
     ValidationKey,

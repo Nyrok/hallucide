@@ -1,7 +1,7 @@
 import pytest
 
 from hallucide.core_types.exceptions import RetrievalError
-from hallucide._3_retrieval.multi_source import MultiSourceRetrievalProvider
+from hallucide.retrieval.multi_source import MultiSourceRetrievalProvider
 from hallucide.core_types.types import Intent, Passage, RetrievalState
 
 

@@ -1,5 +1,5 @@
 from hallucide import Orchestrator, RiskTier
-from hallucide._7_audit.audit import build_compliance_log, passage_hash, verify_replay
+from hallucide.audit.audit import build_compliance_log, passage_hash, verify_replay
 from hallucide.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
 
 

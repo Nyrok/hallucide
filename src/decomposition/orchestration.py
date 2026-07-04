@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Iterable, Protocol
 
-from hallucide._2_coverage.coverage import DEFAULT_COVERAGE_THRESHOLD, build_echo_back, check_coverage
+from hallucide.coverage.coverage import DEFAULT_COVERAGE_THRESHOLD, build_echo_back, check_coverage
 from hallucide.core_types.exceptions import RetrievalError, VerificationError
-from hallucide._3_retrieval.retrieval import RetrievalProvider, advance_retrieval
-from hallucide._5_triage.triage import RiskTier, apply_risk_floor
+from hallucide.retrieval.retrieval import RetrievalProvider, advance_retrieval
+from hallucide.triage.triage import RiskTier, apply_risk_floor
 from hallucide.core_types.types import Claim, ClaimStatus, Intent, IntentExecutionResult, OrchestrationResult, Passage, RetrievalState
-from hallucide._4_verification.verifier import verify_claims
+from hallucide.verification.verifier import verify_claims
 
 
 class Decomposer(Protocol):

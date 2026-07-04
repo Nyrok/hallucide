@@ -1,7 +1,7 @@
 # DEFI.md
 
 ### Nom du défi
-IA et Hallucination
+IA et Hallucination : Hallucide
 
 ### Description courte
 Les IA génératives inventent des faits avec aplomb, jusqu'à leurs propres justifications. En contexte institutionnel, impossible de distinguer une information vérifiée d'un contenu généré. Hallucide répond à ce problème : chaque affirmation est confrontée mot pour mot à la source officielle avant d'être affichée.
@@ -23,7 +23,12 @@ Le verdict ne vient jamais du modèle : un pipeline déterministe (Hallucide) v�
 
 ### Contributeurs
 - Hamza Konte
-- Rayane
+- Rayane Bourkaib
+- Leo Garcia
+- Michael Leclercq
+- Hugo Exposito-Farese
+- Nassim Bariol
+- Mohamed-Aymen Bouyahia
 
 ### Ressources utilisées
 Cochez les ressources utilisées en remplaçant `[ ]` par `[x]`.

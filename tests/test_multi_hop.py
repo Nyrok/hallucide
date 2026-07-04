@@ -1,4 +1,4 @@
-from hallucide._3_retrieval.multi_hop import build_hop_query, extract_followable_hops, select_next_hop
+from hallucide.retrieval.multi_hop import build_hop_query, extract_followable_hops, select_next_hop
 from hallucide.core_types.types import Passage, RetrievalState
 
 _LIENS_1103 = [

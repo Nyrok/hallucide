@@ -1,4 +1,4 @@
-from hallucide._4_verification.slot_provenance import check_slot_provenance
+from hallucide.verification.slot_provenance import check_slot_provenance
 
 
 def test_slot_is_copied_when_present_verbatim_in_question() -> None:

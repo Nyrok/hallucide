@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from hallucide.core_types.exceptions import RetrievalError
-from hallucide._3_retrieval.mcp_client import McpToolClient
-from hallucide._3_retrieval.moulineuse import _strip_html
-from hallucide._4_verification.semantic_similarity import similarity_score
+from hallucide.retrieval.mcp_client import McpToolClient
+from hallucide.retrieval.moulineuse import _strip_html
+from hallucide.verification.semantic_similarity import similarity_score
 from hallucide.core_types.types import Intent, Passage, RetrievalState
 
 # Serveur MCP « Parlement » (LegiWatch) : expose les interventions verbatim en

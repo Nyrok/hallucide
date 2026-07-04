@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 from hallucide.core_types.exceptions import RetrievalError
-from hallucide._3_retrieval.mcp_client import McpToolClient
+from hallucide.retrieval.mcp_client import McpToolClient
 from hallucide.core_types.types import Intent, Passage, RetrievalState
 
 DEFAULT_DATAGOUV_URL = "https://mcp.data.gouv.fr/mcp"

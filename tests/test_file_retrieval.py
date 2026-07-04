@@ -4,7 +4,7 @@ import zipfile
 import pytest
 
 from hallucide.core_types.exceptions import RetrievalError
-from hallucide._3_retrieval.file_retrieval import FileRetrievalProvider, _extract_csv_bytes, _parse_csv
+from hallucide.retrieval.file_retrieval import FileRetrievalProvider, _extract_csv_bytes, _parse_csv
 from hallucide.core_types.types import Intent, RetrievalState
 
 _CSV = (
@@ -37,7 +37,7 @@ class FakeClient:
 
 def _provider_with_payload(monkeypatch, payload: bytes) -> FileRetrievalProvider:
     provider = FileRetrievalProvider(client=FakeClient("https://example.test/file.csv"))
-    monkeypatch.setattr("hallucide._3_retrieval.file_retrieval._download", lambda url: payload)
+    monkeypatch.setattr("hallucide.retrieval.file_retrieval._download", lambda url: payload)
     return provider
 
 

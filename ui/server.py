@@ -35,9 +35,9 @@ import uuid  # noqa: E402
 
 from hallucide import ClaudeModelProvider, GeminiModelProvider, MistralModelProvider, MultiSourceRetrievalProvider, Hallucide  # noqa: E402
 from hallucide.core_types.exceptions import RetrievalError, HallucideError, VerificationError  # noqa: E402
-from hallucide._3_retrieval.mcp_client import McpToolClient  # noqa: E402
+from hallucide.retrieval.mcp_client import McpToolClient  # noqa: E402
 from hallucide.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState  # noqa: E402
-from hallucide._4_verification.verifier import verify_claims  # noqa: E402
+from hallucide.verification.verifier import verify_claims  # noqa: E402
 
 HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 

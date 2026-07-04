@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
-from hallucide._4_verification.normalization import normalize_text
+from hallucide.verification.normalization import normalize_text
 from hallucide.core_types.types import ClaimStatus, Passage, VerificationResult
 
 # Étape 8, Path A -- similarité "sémantique" DÉTERMINISTE.

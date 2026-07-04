@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from hallucide._7_audit.audit import ComplianceLogEntry
+from hallucide.audit.audit import ComplianceLogEntry
 
 # §13.4 : tension centrale -- savoir quel utilisateur recherche quelle loi
 # est politiquement sensible. Principe : séparer la preuve de conformité de

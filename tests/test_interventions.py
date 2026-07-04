@@ -1,4 +1,4 @@
-from hallucide._3_retrieval.interventions import InterventionsRetrievalProvider
+from hallucide.retrieval.interventions import InterventionsRetrievalProvider
 from hallucide.core_types.exceptions import RetrievalError
 from hallucide.core_types.types import Intent, RetrievalState
 

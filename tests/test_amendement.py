@@ -1,4 +1,4 @@
-from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider, _strip_html
+from hallucide.retrieval.moulineuse import MoulineuseRetrievalProvider, _strip_html
 from hallucide.core_types.exceptions import RetrievalError
 from hallucide.core_types.types import Intent, RetrievalState
 

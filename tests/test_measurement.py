@@ -8,7 +8,7 @@ from hallucide.analysis.measurement import (
     run_triage_measurement,
 )
 from hallucide.analysis.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET
-from hallucide._5_triage.triage import RiskTier
+from hallucide.triage.triage import RiskTier
 from hallucide.core_types.types import Claim, ClaimStatus, DocumentMode, Passage
 
 

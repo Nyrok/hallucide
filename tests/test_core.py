@@ -1,5 +1,5 @@
 from hallucide import AskResult, MockModelProvider, RiskTier, Hallucide, SovereignLogStore
-from hallucide._6_validation.human_validation import ValidationDecision, ValidationKey
+from hallucide.validation.human_validation import ValidationDecision, ValidationKey
 from hallucide.core_types.types import Intent, Passage, RetrievalState
 
 

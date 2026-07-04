@@ -4,7 +4,7 @@ import re
 from typing import Iterable
 
 from hallucide.core_types.exceptions import InvalidClaimError, VerificationError
-from hallucide._4_verification.normalization import normalize_numeric, normalize_text
+from hallucide.verification.normalization import normalize_numeric, normalize_text
 from hallucide.core_types.types import Claim, ClaimStatus, Passage, VerificationResult
 
 # §7, piège B2 : connecteurs de restriction dont l'omission juste après une

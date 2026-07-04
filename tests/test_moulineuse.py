@@ -1,7 +1,7 @@
 import pytest
 
 from hallucide.core_types.exceptions import RetrievalError
-from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider
+from hallucide.retrieval.moulineuse import MoulineuseRetrievalProvider
 from hallucide.core_types.types import Intent, RetrievalState
 
 

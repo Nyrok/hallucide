@@ -6,7 +6,7 @@ import urllib.request
 from typing import Any
 
 from hallucide.core_types.exceptions import HallucideError
-from hallucide._1_decomposition.llm import ModelProvider
+from hallucide.decomposition.llm import ModelProvider
 
 DEFAULT_MISTRAL_MODEL = "mistral-small-latest"
 

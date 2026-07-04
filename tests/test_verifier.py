@@ -1,6 +1,6 @@
 from hallucide.core_types.exceptions import VerificationError
 from hallucide.core_types.types import Claim, ClaimStatus, Passage
-from hallucide._4_verification.verifier import verify_claims
+from hallucide.verification.verifier import verify_claims
 
 
 def test_faithful_paraphrase_marked_interpretation_is_accepted() -> None:

@@ -1,6 +1,6 @@
 from hallucide import PromptBasedDecomposer, PromptBasedIntentGenerator
 from hallucide.core_types.exceptions import HallucideError
-from hallucide._1_decomposition.llm import ModelProvider
+from hallucide.decomposition.llm import ModelProvider
 from hallucide.core_types.types import ClaimStatus, Intent, Passage
 
 

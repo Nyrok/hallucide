@@ -5,9 +5,9 @@ import re
 from typing import Any
 
 from hallucide.core_types.exceptions import RetrievalError
-from hallucide._3_retrieval.mcp_client import McpToolClient
-from hallucide._4_verification.semantic_similarity import similarity_score
-from hallucide._4_verification.slot_provenance import check_slot_provenance
+from hallucide.retrieval.mcp_client import McpToolClient
+from hallucide.verification.semantic_similarity import similarity_score
+from hallucide.verification.slot_provenance import check_slot_provenance
 from hallucide.core_types.types import Intent, Passage, RetrievalState
 
 DEFAULT_MOULINEUSE_URL = "https://mcp.code4code.eu/mcp"

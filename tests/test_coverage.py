@@ -1,4 +1,4 @@
-from hallucide._2_coverage.coverage import build_echo_back, check_coverage
+from hallucide.coverage.coverage import build_echo_back, check_coverage
 from hallucide.core_types.types import Intent
 
 

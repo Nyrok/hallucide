@@ -1,10 +1,10 @@
-from hallucide._6_validation.document import (
+from hallucide.validation.document import (
     check_documentary_coverage,
     segment_source_units,
     verify_document,
 )
 from hallucide.analysis.measurement import DocumentCase, run_document_measurement
-from hallucide._5_triage.triage import RiskTier
+from hallucide.triage.triage import RiskTier
 from hallucide.core_types.types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
 
 _LOI_TEXT = (

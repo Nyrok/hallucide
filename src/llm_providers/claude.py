@@ -6,7 +6,7 @@ import urllib.request
 from typing import Any
 
 from hallucide.core_types.exceptions import HallucideError
-from hallucide._1_decomposition.llm import ModelProvider
+from hallucide.decomposition.llm import ModelProvider
 
 # Par défaut : le modèle Claude le plus capable (cf. référence API Anthropic).
 # Surchargeable via le paramètre `model` du constructeur.

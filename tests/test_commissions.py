@@ -1,4 +1,4 @@
-from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider, _date_seule
+from hallucide.retrieval.moulineuse import MoulineuseRetrievalProvider, _date_seule
 from hallucide.core_types.exceptions import RetrievalError
 from hallucide.core_types.types import Intent, RetrievalState
 

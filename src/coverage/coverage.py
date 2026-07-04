@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from hallucide._4_verification.normalization import normalize_text
+from hallucide.verification.normalization import normalize_text
 from hallucide.core_types.types import Intent
 
 _TOKEN_PATTERN = re.compile(r"[\wÀ-ÿ]+", re.UNICODE)

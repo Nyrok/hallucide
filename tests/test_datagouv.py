@@ -1,6 +1,6 @@
 import pytest
 
-from hallucide._3_retrieval.datagouv import DataGouvRetrievalProvider
+from hallucide.retrieval.datagouv import DataGouvRetrievalProvider
 from hallucide.core_types.exceptions import RetrievalError
 from hallucide.core_types.types import Intent, RetrievalState
 

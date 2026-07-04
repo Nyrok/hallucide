@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from hallucide.analysis.measurement import DocumentCase, TrapCase, TriageCase
-from hallucide._5_triage.triage import RiskTier
+from hallucide.triage.triage import RiskTier
 from hallucide.core_types.types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
 
 _CIVIL_CODE_PASSAGE = Passage(

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from hallucide._3_retrieval.datagouv import DataGouvRetrievalProvider
+from hallucide.retrieval.datagouv import DataGouvRetrievalProvider
 from hallucide.core_types.exceptions import RetrievalError
-from hallucide._3_retrieval.file_retrieval import FileRetrievalProvider
-from hallucide._3_retrieval.interventions import InterventionsRetrievalProvider
-from hallucide._3_retrieval.moulineuse import MoulineuseRetrievalProvider
+from hallucide.retrieval.file_retrieval import FileRetrievalProvider
+from hallucide.retrieval.interventions import InterventionsRetrievalProvider
+from hallucide.retrieval.moulineuse import MoulineuseRetrievalProvider
 from hallucide.core_types.types import Intent, Passage, RetrievalState
 
 

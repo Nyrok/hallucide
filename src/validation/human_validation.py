@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 
-from hallucide._7_audit.audit import passage_hash
+from hallucide.audit.audit import passage_hash
 from hallucide.core_types.types import IntentExecutionResult, RiskTier
 
 

@@ -13,9 +13,9 @@ import re
 from dataclasses import dataclass
 
 from hallucide.core_types.exceptions import VerificationError
-from hallucide._5_triage.triage import RiskTier, apply_risk_floor
+from hallucide.triage.triage import RiskTier, apply_risk_floor
 from hallucide.core_types.types import ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage, VerificationResult
-from hallucide._4_verification.verifier import verify_claims
+from hallucide.verification.verifier import verify_claims
 
 # §7ter : la segmentation en unités structurelles est faite par le CODE,
 # jamais par le LLM -- sinon le LLM pourrait "segmenter" de façon à faire

@@ -1,21 +1,21 @@
-from ._7_audit.audit import ComplianceLogEntry, build_compliance_log, build_compliance_log_entry, passage_hash, verify_replay
+from .audit.audit import ComplianceLogEntry, build_compliance_log, build_compliance_log_entry, passage_hash, verify_replay
 from .analysis.calibration import Annotation, CalibrationReport, CohenKappaResult, compute_cohen_kappa, run_calibration
 from .core import AskResult, Hallucide
-from ._2_coverage.coverage import CoverageResult, build_echo_back, check_coverage
-from ._3_retrieval.datagouv import DataGouvRetrievalProvider
-from ._6_validation.document import (
+from .coverage.coverage import CoverageResult, build_echo_back, check_coverage
+from .retrieval.datagouv import DataGouvRetrievalProvider
+from .validation.document import (
     DocumentVerificationResult,
     check_documentary_coverage,
     segment_source_units,
     verify_document,
 )
 from .core_types.exceptions import RetrievalError, HallucideError, VerificationError
-from ._3_retrieval.file_retrieval import FileRetrievalProvider
-from ._1_decomposition.llm import ModelProvider, MockModelProvider, PromptBasedDecomposer, PromptBasedIntentGenerator
+from .retrieval.file_retrieval import FileRetrievalProvider
+from .decomposition.llm import ModelProvider, MockModelProvider, PromptBasedDecomposer, PromptBasedIntentGenerator
 from .llm_providers.gemini import GeminiModelProvider
 from .llm_providers.claude import ClaudeModelProvider
 from .llm_providers.litellm_provider import LiteLLMModelProvider
-from ._6_validation.human_validation import (
+from .validation.human_validation import (
     HumanValidationRegistry,
     ValidationDecision,
     ValidationKey,
@@ -23,7 +23,7 @@ from ._6_validation.human_validation import (
     is_publishable,
     resolve_human_validation_status,
 )
-from ._3_retrieval.mcp_client import McpToolClient
+from .retrieval.mcp_client import McpToolClient
 from .analysis.measurement import (
     CaseResult,
     DocumentCase,
@@ -40,20 +40,20 @@ from .analysis.measurement import (
     run_triage_measurement,
 )
 from .llm_providers.mistral import MistralModelProvider
-from ._3_retrieval.moulineuse import MoulineuseRetrievalProvider
-from ._3_retrieval.multi_hop import NextHop, build_hop_query, extract_followable_hops, select_next_hop
-from ._3_retrieval.multi_source import MultiSourceRetrievalProvider
-from ._1_decomposition.orchestration import Decomposer, IntentGenerator, Orchestrator
-from ._3_retrieval.retrieval import RetrievalProvider, advance_retrieval
-from ._4_verification.slot_provenance import SlotProvenance, check_slot_provenance
-from ._4_verification.semantic_similarity import (
+from .retrieval.moulineuse import MoulineuseRetrievalProvider
+from .retrieval.multi_hop import NextHop, build_hop_query, extract_followable_hops, select_next_hop
+from .retrieval.multi_source import MultiSourceRetrievalProvider
+from .decomposition.orchestration import Decomposer, IntentGenerator, Orchestrator
+from .retrieval.retrieval import RetrievalProvider, advance_retrieval
+from .verification.slot_provenance import SlotProvenance, check_slot_provenance
+from .verification.semantic_similarity import (
     DEFAULT_DISTANCE_THRESHOLD,
     any_distant_reformulation,
     is_distant_reformulation,
     semantic_floor_conditions,
     similarity_score,
 )
-from ._7_audit.sovereign_log import (
+from .audit.sovereign_log import (
     AccessLogEntry,
     NonCorrelationViolation,
     SovereignLogStore,
@@ -61,7 +61,7 @@ from ._7_audit.sovereign_log import (
     build_access_log_entry,
     generate_session_ref,
 )
-from ._5_triage.triage import RiskTier, apply_risk_floor
+from .triage.triage import RiskTier, apply_risk_floor
 from .core_types.types import (
     Claim,
     ClaimStatus,
@@ -75,7 +75,7 @@ from .core_types.types import (
     RetrievalState,
     VerificationResult,
 )
-from ._4_verification.verifier import verify_claims
+from .verification.verifier import verify_claims
 
 __all__ = [
     "Annotation",

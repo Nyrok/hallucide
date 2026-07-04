@@ -1,8 +1,8 @@
 import pytest
 
 from hallucide import Orchestrator, RiskTier
-from hallucide._7_audit.audit import build_compliance_log
-from hallucide._7_audit.sovereign_log import (
+from hallucide.audit.audit import build_compliance_log
+from hallucide.audit.sovereign_log import (
     NonCorrelationViolation,
     SovereignLogStore,
     assert_compliance_entry_is_anonymous,

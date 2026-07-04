@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from hallucide.core_types.exceptions import HallucideError
-from hallucide._1_decomposition.llm import ModelProvider
+from hallucide.decomposition.llm import ModelProvider
 from hallucide.analysis.trust import ensure_system_trust_store
 
 DEFAULT_LITELLM_MODEL = "mistral/mistral-small-latest"
