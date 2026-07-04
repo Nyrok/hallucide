@@ -297,7 +297,7 @@ class MoulineuseRetrievalProvider:
     """
 
     # fonction demandée -> type d'organe dans l'open data Assemblée
-    _FONCTION_ORGANE = {"depute": "ASSEMBLEE", "ministre": "GOUVERNEMENT"}
+    _FONCTION_ORGANE = {"depute": "ASSEMBLEE", "ministre": "MINISTERE"}
 
     def _retrieve_mandat(self, query: dict[str, str]) -> Passage:
         # Mandats de député d'un acteur (open data Assemblée). Même contrat que
@@ -322,7 +322,7 @@ class MoulineuseRetrievalProvider:
             lignes = list(dict.fromkeys(lignes))
 
         if not lignes:
-            libf = "député" if fonction == "depute" else "membre du Gouvernement"
+            libf = "député" if fonction == "depute" else "ministre"
             lignes = [f"Aucun mandat de {libf} trouvé pour « {acteur or acteur_ref} » "
                       "dans l'open data officiel de l'Assemblée nationale."]
 
