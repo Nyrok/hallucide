@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .measurement import DocumentCase, TrapCase, TriageCase
-from .triage import RiskTier
-from .types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
+from sentinel_guard.analysis.measurement import DocumentCase, TrapCase, TriageCase
+from sentinel_guard._5_triage.triage import RiskTier
+from sentinel_guard.core_types.types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
 
 _CIVIL_CODE_PASSAGE = Passage(
     source_id="LEGIARTI000032040777",

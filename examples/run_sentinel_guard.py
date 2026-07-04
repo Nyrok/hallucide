@@ -5,7 +5,7 @@ workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
 from sentinel_guard import MockModelProvider, MultiSourceRetrievalProvider, SentinelGuard
-from sentinel_guard.moulineuse import MoulineuseRetrievalProvider
+from sentinel_guard._3_retrieval.moulineuse import MoulineuseRetrievalProvider
 
 
 def main() -> None:

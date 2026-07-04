@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from .exceptions import SentinelGuardError
-from .llm import ModelProvider
-from .trust import ensure_system_trust_store
+from sentinel_guard.core_types.exceptions import SentinelGuardError
+from sentinel_guard._1_decomposition.llm import ModelProvider
+from sentinel_guard.analysis.trust import ensure_system_trust_store
 
 DEFAULT_LITELLM_MODEL = "mistral/mistral-small-latest"
 

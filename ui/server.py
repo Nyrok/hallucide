@@ -30,10 +30,10 @@ if env_path.exists():
 import re  # noqa: E402
 
 from sentinel_guard import MistralModelProvider, SentinelGuard  # noqa: E402
-from sentinel_guard.exceptions import RetrievalError, SentinelGuardError, VerificationError  # noqa: E402
-from sentinel_guard.mcp_client import McpToolClient  # noqa: E402
-from sentinel_guard.types import Claim, ClaimStatus  # noqa: E402
-from sentinel_guard.verifier import verify_claims  # noqa: E402
+from sentinel_guard.core_types.exceptions import RetrievalError, SentinelGuardError, VerificationError  # noqa: E402
+from sentinel_guard._3_retrieval.mcp_client import McpToolClient  # noqa: E402
+from sentinel_guard.core_types.types import Claim, ClaimStatus  # noqa: E402
+from sentinel_guard._4_verification.verifier import verify_claims  # noqa: E402
 
 HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 

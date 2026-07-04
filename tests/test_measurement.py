@@ -1,4 +1,4 @@
-from sentinel_guard.measurement import (
+from sentinel_guard.analysis.measurement import (
     REFUS,
     TrapCase,
     TriageCase,
@@ -7,9 +7,9 @@ from sentinel_guard.measurement import (
     run_measurement,
     run_triage_measurement,
 )
-from sentinel_guard.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET
-from sentinel_guard.triage import RiskTier
-from sentinel_guard.types import Claim, ClaimStatus, DocumentMode, Passage
+from sentinel_guard.analysis.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET
+from sentinel_guard._5_triage.triage import RiskTier
+from sentinel_guard.core_types.types import Claim, ClaimStatus, DocumentMode, Passage
 
 
 def test_evaluate_case_correct_for_exact_citation() -> None:

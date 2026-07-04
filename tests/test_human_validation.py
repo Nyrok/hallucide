@@ -1,11 +1,11 @@
-from sentinel_guard.human_validation import (
+from sentinel_guard._6_validation.human_validation import (
     HumanValidationRegistry,
     ValidationDecision,
     ValidationKey,
     is_publishable,
     resolve_human_validation_status,
 )
-from sentinel_guard.types import Claim, ClaimStatus, Intent, IntentExecutionResult, Passage, RiskTier, VerificationResult
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, IntentExecutionResult, Passage, RiskTier, VerificationResult
 
 
 def _result(risk_tier: RiskTier, intent_id: str = "1", text: str = "Passage authentique.") -> IntentExecutionResult:

@@ -6,8 +6,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from .normalization import normalize_text
-from .types import IntentExecutionResult, OrchestrationResult, RiskTier
+from sentinel_guard._4_verification.normalization import normalize_text
+from sentinel_guard.core_types.types import IntentExecutionResult, OrchestrationResult, RiskTier
 
 GOVERNANCE_VERSION = "v4"
 

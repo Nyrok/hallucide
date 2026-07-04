@@ -3,8 +3,8 @@ import types
 
 import pytest
 
-from sentinel_guard.exceptions import SentinelGuardError
-from sentinel_guard.litellm_provider import LiteLLMModelProvider
+from sentinel_guard.core_types.exceptions import SentinelGuardError
+from sentinel_guard._1_decomposition.llm_providers.litellm_provider import LiteLLMModelProvider
 
 
 def _install_fake_litellm(monkeypatch, response_content: str | None = "result from litellm", raise_error: bool = False):

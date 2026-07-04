@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .document import verify_document
-from .exceptions import InvalidClaimError, VerificationError
-from .triage import RiskTier, apply_risk_floor
-from .types import Claim, ClaimStatus, DocumentDraft, Passage
-from .verifier import verify_claims
+from sentinel_guard._6_validation.document import verify_document
+from sentinel_guard.core_types.exceptions import InvalidClaimError, VerificationError
+from sentinel_guard._5_triage.triage import RiskTier, apply_risk_floor
+from sentinel_guard.core_types.types import Claim, ClaimStatus, DocumentDraft, Passage
+from sentinel_guard._4_verification.verifier import verify_claims
 
 REFUS = "REFUS_VÉRIFICATION"
 

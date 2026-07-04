@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .normalization import normalize_text
-from .types import Intent
+from sentinel_guard._4_verification.normalization import normalize_text
+from sentinel_guard.core_types.types import Intent
 
 _TOKEN_PATTERN = re.compile(r"[\wÀ-ÿ]+", re.UNICODE)
 

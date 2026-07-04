@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
-from .exceptions import InvalidClaimError, VerificationError
-from .normalization import normalize_numeric, normalize_text
-from .types import Claim, ClaimStatus, Passage, VerificationResult
+from sentinel_guard.core_types.exceptions import InvalidClaimError, VerificationError
+from sentinel_guard._4_verification.normalization import normalize_numeric, normalize_text
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Passage, VerificationResult
 
 # §7, piège B2 : connecteurs de restriction dont l'omission juste après une
 # citation signale une troncature possible. Portée explicitement limitée à

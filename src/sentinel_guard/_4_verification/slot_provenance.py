@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .normalization import normalize_text
+from sentinel_guard._4_verification.normalization import normalize_text
 
 # §4bis, piège A3 : un numéro existant mais faux, deviné par le LLM, récupère
 # un article réel qui matche verbatim et serait exposé AUTHENTIFIÉ à tort.

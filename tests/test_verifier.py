@@ -1,6 +1,6 @@
-from sentinel_guard.exceptions import VerificationError
-from sentinel_guard.types import Claim, ClaimStatus, Passage
-from sentinel_guard.verifier import verify_claims
+from sentinel_guard.core_types.exceptions import VerificationError
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Passage
+from sentinel_guard._4_verification.verifier import verify_claims
 
 
 def test_faithful_paraphrase_marked_interpretation_is_accepted() -> None:

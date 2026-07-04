@@ -12,10 +12,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .exceptions import VerificationError
-from .triage import RiskTier, apply_risk_floor
-from .types import ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage, VerificationResult
-from .verifier import verify_claims
+from sentinel_guard.core_types.exceptions import VerificationError
+from sentinel_guard._5_triage.triage import RiskTier, apply_risk_floor
+from sentinel_guard.core_types.types import ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage, VerificationResult
+from sentinel_guard._4_verification.verifier import verify_claims
 
 # §7ter : la segmentation en unités structurelles est faite par le CODE,
 # jamais par le LLM -- sinon le LLM pourrait "segmenter" de façon à faire

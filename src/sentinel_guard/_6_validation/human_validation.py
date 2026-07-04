@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 
-from .audit import passage_hash
-from .types import IntentExecutionResult, RiskTier
+from sentinel_guard._7_audit.audit import passage_hash
+from sentinel_guard.core_types.types import IntentExecutionResult, RiskTier
 
 
 class ValidationDecision(str, Enum):

@@ -1,5 +1,5 @@
 from sentinel_guard import MistralModelProvider
-from sentinel_guard.exceptions import SentinelGuardError
+from sentinel_guard.core_types.exceptions import SentinelGuardError
 
 
 def test_mistral_provider_rejects_forced_tool_choice() -> None:

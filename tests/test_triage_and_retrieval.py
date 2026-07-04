@@ -1,6 +1,6 @@
 from sentinel_guard import RiskTier, apply_risk_floor, advance_retrieval, RetrievalProvider
-from sentinel_guard.exceptions import RetrievalError
-from sentinel_guard.types import Intent, Passage, RetrievalState
+from sentinel_guard.core_types.exceptions import RetrievalError
+from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
 
 
 class DummyRetrievalProvider:

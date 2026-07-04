@@ -1,8 +1,8 @@
 import pytest
 
-from sentinel_guard.exceptions import RetrievalError
-from sentinel_guard.multi_source import MultiSourceRetrievalProvider
-from sentinel_guard.types import Intent, Passage, RetrievalState
+from sentinel_guard.core_types.exceptions import RetrievalError
+from sentinel_guard._3_retrieval.multi_source import MultiSourceRetrievalProvider
+from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
 
 
 class FakeMoulineuse:

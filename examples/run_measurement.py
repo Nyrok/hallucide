@@ -4,8 +4,8 @@ from pathlib import Path
 workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard.measurement import run_document_measurement, run_measurement, run_triage_measurement
-from sentinel_guard.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET
+from sentinel_guard.analysis.measurement import run_document_measurement, run_measurement, run_triage_measurement
+from sentinel_guard.analysis.trap_dataset import DOCUMENT_TRAP_DATASET, TRAP_DATASET, TRIAGE_DATASET
 
 
 def main() -> None:

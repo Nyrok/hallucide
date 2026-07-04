@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Iterable, Protocol
 
-from .coverage import DEFAULT_COVERAGE_THRESHOLD, build_echo_back, check_coverage
-from .exceptions import RetrievalError, VerificationError
-from .retrieval import RetrievalProvider, advance_retrieval
-from .triage import RiskTier, apply_risk_floor
-from .types import Claim, ClaimStatus, Intent, IntentExecutionResult, OrchestrationResult, Passage, RetrievalState
-from .verifier import verify_claims
+from sentinel_guard._2_coverage.coverage import DEFAULT_COVERAGE_THRESHOLD, build_echo_back, check_coverage
+from sentinel_guard.core_types.exceptions import RetrievalError, VerificationError
+from sentinel_guard._3_retrieval.retrieval import RetrievalProvider, advance_retrieval
+from sentinel_guard._5_triage.triage import RiskTier, apply_risk_floor
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, IntentExecutionResult, OrchestrationResult, Passage, RetrievalState
+from sentinel_guard._4_verification.verifier import verify_claims
 
 
 class Decomposer(Protocol):

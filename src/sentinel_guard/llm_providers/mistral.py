@@ -5,8 +5,8 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from .exceptions import SentinelGuardError
-from .llm import ModelProvider
+from sentinel_guard.core_types.exceptions import SentinelGuardError
+from sentinel_guard._1_decomposition.llm import ModelProvider
 
 DEFAULT_MISTRAL_MODEL = "mistral-small-latest"
 

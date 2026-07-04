@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from .exceptions import RetrievalError
-from .types import Intent, Passage, RetrievalState
+from sentinel_guard.core_types.exceptions import RetrievalError
+from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
 
 
 class RetrievalProvider(Protocol):

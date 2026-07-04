@@ -4,8 +4,8 @@ import json
 import re
 from typing import Any, Protocol
 
-from .exceptions import SentinelGuardError, VerificationError
-from .types import Claim, ClaimStatus, Intent, Passage
+from sentinel_guard.core_types.exceptions import SentinelGuardError, VerificationError
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage
 
 
 class ModelProvider(Protocol):

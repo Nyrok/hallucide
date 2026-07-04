@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .types import Passage, RetrievalState
+from sentinel_guard.core_types.types import Passage, RetrievalState
 
 # §4ter : types de lien Légifrance pertinents pour suivre un renvoi normatif
 # réel vers un article de code (la seule cible que MoulineuseRetrievalProvider

@@ -7,10 +7,10 @@ import urllib.request
 import zipfile
 from typing import Any
 
-from .exceptions import RetrievalError
-from .mcp_client import McpToolClient
-from .trust import ensure_system_trust_store
-from .types import Intent, Passage, RetrievalState
+from sentinel_guard.core_types.exceptions import RetrievalError
+from sentinel_guard._3_retrieval.mcp_client import McpToolClient
+from sentinel_guard.analysis.trust import ensure_system_trust_store
+from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
 
 DEFAULT_DATAGOUV_URL = "https://mcp.data.gouv.fr/mcp"
 _MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024  # garde-fou : ne pas parser un fichier énorme en mémoire

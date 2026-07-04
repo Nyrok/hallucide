@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .exceptions import RetrievalError
-from .mcp_client import McpToolClient
-from .types import Intent, Passage, RetrievalState
+from sentinel_guard.core_types.exceptions import RetrievalError
+from sentinel_guard._3_retrieval.mcp_client import McpToolClient
+from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
 
 DEFAULT_DATAGOUV_URL = "https://mcp.data.gouv.fr/mcp"
 
