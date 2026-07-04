@@ -61,7 +61,10 @@ Cochez les ressources utilisées en remplaçant `[ ]` par `[x]`.
 - [Image 2](images/image-2.png)
 
 ### Documents
-- [Spécification du moteur](../docs/spec-v4.md)
+- [Présentation Hallucide](docs/presentation-hallucide.pdf)
+- [Spécification du moteur](docs/specification-moteur.pdf)
+- [Statut d'implémentation](docs/statut-implementation.pdf)
+- [Design](docs/design-hallucide.pdf)
 
 ### URL de démonstration
 http://141.11.165.40:8770
