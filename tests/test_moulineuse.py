@@ -1,8 +1,8 @@
 import pytest
 
-from sentinel_guard.exceptions import RetrievalError
-from sentinel_guard.moulineuse import MoulineuseRetrievalProvider
-from sentinel_guard.types import Intent, RetrievalState
+from sentinel_guard.core_types.exceptions import RetrievalError
+from sentinel_guard._3_retrieval.moulineuse import MoulineuseRetrievalProvider
+from sentinel_guard.core_types.types import Intent, RetrievalState
 
 
 class FakeMcpClient:

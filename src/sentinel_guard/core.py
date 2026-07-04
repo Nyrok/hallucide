@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .audit import ComplianceLogEntry, build_compliance_log
-from .coverage import DEFAULT_COVERAGE_THRESHOLD
-from .human_validation import HumanValidationRegistry, is_publishable, resolve_human_validation_status
-from .llm import ModelProvider, PromptBasedDecomposer, PromptBasedIntentGenerator
-from .multi_source import MultiSourceRetrievalProvider
-from .orchestration import Orchestrator
-from .sovereign_log import SovereignLogStore, generate_session_ref
-from .triage import RiskTier
-from .types import OrchestrationResult, RetrievalState
+from ._7_audit.audit import ComplianceLogEntry, build_compliance_log
+from ._2_coverage.coverage import DEFAULT_COVERAGE_THRESHOLD
+from ._6_validation.human_validation import HumanValidationRegistry, is_publishable, resolve_human_validation_status
+from ._1_decomposition.llm import ModelProvider, PromptBasedDecomposer, PromptBasedIntentGenerator
+from ._3_retrieval.multi_source import MultiSourceRetrievalProvider
+from ._1_decomposition.orchestration import Orchestrator
+from ._7_audit.sovereign_log import SovereignLogStore, generate_session_ref
+from ._5_triage.triage import RiskTier
+from .core_types.types import OrchestrationResult, RetrievalState
 
 
 @dataclass(frozen=True)

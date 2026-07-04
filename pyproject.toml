@@ -2,7 +2,7 @@
 name = "sentinel_guard"
 version = "0.1.0"
 description = "Core pipeline for deterministic source fidelity verification and retrieval orchestration."
-authors = ["Sentinel Guard Team <team@example.com>"]
+authors = [{name = "Sentinel Guard Team", email = "team@example.com"}]
 requires-python = ">=3.11"
 license = {text = "MIT"}
 readme = "README.md"
@@ -20,3 +20,6 @@ litellm = ["litellm>=1.90,<2", "truststore>=0.9"]
 [build-system]
 requires = ["setuptools>=61.0","wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

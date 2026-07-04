@@ -1,6 +1,6 @@
 import pytest
 
-from sentinel_guard.calibration import Annotation, compute_cohen_kappa, run_calibration
+from sentinel_guard.analysis.calibration import Annotation, compute_cohen_kappa, run_calibration
 
 
 def test_perfect_agreement_gives_kappa_one() -> None:

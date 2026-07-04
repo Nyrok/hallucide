@@ -1,6 +1,6 @@
 from sentinel_guard import MockModelProvider, PromptBasedDecomposer, PromptBasedIntentGenerator
-from sentinel_guard.exceptions import SentinelGuardError
-from sentinel_guard.types import ClaimStatus, Intent, Passage
+from sentinel_guard.core_types.exceptions import SentinelGuardError
+from sentinel_guard.core_types.types import ClaimStatus, Intent, Passage
 
 
 def test_mock_model_provider_forced_tool_choice_rejected() -> None:

@@ -1,6 +1,6 @@
 from sentinel_guard import AskResult, MockModelProvider, RiskTier, SentinelGuard, SovereignLogStore
-from sentinel_guard.human_validation import ValidationDecision, ValidationKey
-from sentinel_guard.types import Intent, Passage, RetrievalState
+from sentinel_guard._6_validation.human_validation import ValidationDecision, ValidationKey
+from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
 
 
 class FakeRetrievalProvider:

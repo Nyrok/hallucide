@@ -1,11 +1,11 @@
-from sentinel_guard.document import (
+from sentinel_guard._6_validation.document import (
     check_documentary_coverage,
     segment_source_units,
     verify_document,
 )
-from sentinel_guard.measurement import DocumentCase, run_document_measurement
-from sentinel_guard.triage import RiskTier
-from sentinel_guard.types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
+from sentinel_guard.analysis.measurement import DocumentCase, run_document_measurement
+from sentinel_guard._5_triage.triage import RiskTier
+from sentinel_guard.core_types.types import Claim, ClaimStatus, CoverageMap, DocumentDraft, DocumentMode, Passage
 
 _LOI_TEXT = (
     "Article 1er\n"

@@ -4,6 +4,8 @@ Orchestrateur de gouvernance pour la fidélité documentaire (spec v4) : un pipe
 
 173 tests, exemples exécutables + démonstrateur web. Statut détaillé section par section : voir `STATUS.md` ; spécification : `sentinel-guard-spec-v4.md`.
 
+> 🗺️ **Travaux de l'équipe (détection d'hallucination, chat futuriste)** : tout est rangé par étapes dans [`demarche/`](demarche/README.md) — comprendre le moteur (`demarche/etape_1_comprendre/COMPRENDRE.md`), le nouveau front (`demarche/etape_2_front/`), et le suivi (`demarche/suivi/BLOCAGES.md`).
+
 ## Prérequis
 
 - Python 3.11+

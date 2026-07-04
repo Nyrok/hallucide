@@ -1,7 +1,7 @@
 from sentinel_guard import PromptBasedDecomposer, PromptBasedIntentGenerator
-from sentinel_guard.exceptions import SentinelGuardError
-from sentinel_guard.llm import ModelProvider
-from sentinel_guard.types import ClaimStatus, Intent, Passage
+from sentinel_guard.core_types.exceptions import SentinelGuardError
+from sentinel_guard._1_decomposition.llm import ModelProvider
+from sentinel_guard.core_types.types import ClaimStatus, Intent, Passage
 
 
 class DummyModelProvider:

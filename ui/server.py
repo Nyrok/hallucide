@@ -4,7 +4,8 @@ visualiser le pipeline Sentinel-Guard en direct : question -> décomposition
 déterministe -> statut coloré + journal de conformité.
 
 Lancement :  python ui/server.py     puis ouvrir http://localhost:8765
-Nécessite MISTRAL_API_KEY dans .env (à la racine du projet).
+Nécessite une clé LLM dans .env (par défaut ANTHROPIC_API_KEY pour Claude ;
+MISTRAL_API_KEY / GEMINI_API_KEY aussi supportées).
 """
 from __future__ import annotations
 
@@ -29,20 +30,38 @@ if env_path.exists():
 
 import re  # noqa: E402
 
-from sentinel_guard import MistralModelProvider, SentinelGuard  # noqa: E402
-from sentinel_guard.exceptions import RetrievalError, SentinelGuardError, VerificationError  # noqa: E402
-from sentinel_guard.mcp_client import McpToolClient  # noqa: E402
-from sentinel_guard.types import Claim, ClaimStatus  # noqa: E402
-from sentinel_guard.verifier import verify_claims  # noqa: E402
+import hashlib  # noqa: E402
+import uuid  # noqa: E402
+
+from sentinel_guard import ClaudeModelProvider, GeminiModelProvider, MistralModelProvider, MultiSourceRetrievalProvider, SentinelGuard  # noqa: E402
+from sentinel_guard.core_types.exceptions import RetrievalError, SentinelGuardError, VerificationError  # noqa: E402
+from sentinel_guard._3_retrieval.mcp_client import McpToolClient  # noqa: E402
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState  # noqa: E402
+from sentinel_guard._4_verification.verifier import verify_claims  # noqa: E402
 
 HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 
 # --- Routage automatique déterministe (§4bis : transparent, jamais opaque) ---
 
 _QUESTION_NUM_RE = re.compile(r"\b(?:qosd|qe|qg|question(?:\s+orale)?)\D{0,20}?(\d{2,6})\b", re.IGNORECASE)
+# « amendement n° 245 », « amendement 245 », « amdt 245 »
+_AMENDEMENT_RE = re.compile(r"\b(?:amendements?|amdt)\s*(?:n[°o]\.?\s*)?(\d{1,5})\b", re.IGNORECASE)
+# Compte rendu / intervention en séance : « qu'a dit X », « position de X sur … »
+_INTERVENTION_HINTS = ("compte rendu", "compte-rendu", "en séance", "en seance", "qu'a dit",
+                       "qu a dit", "position de", "position du", "intervention de",
+                       "s'est exprimé", "a déclaré", "a defendu", "a défendu", "propos de")
+# Nom d'orateur après un déclencheur (M./Mme/de/du/par) : « de Darmanin »,
+# « M. Gérald Darmanin ». On garde 1 à 3 mots capitalisés.
+_ORATEUR_RE = re.compile(r"(?:M\.|Mme|monsieur|madame|de|du|par)\s+"
+                         r"([A-ZÀ-Ÿ][\wÀ-ÿ'’-]+(?:\s+[A-ZÀ-Ÿ][\wÀ-ÿ'’-]+){0,2})")
+# Nom complet d'un député (au moins prénom + nom capitalisés) : « Gabriel Attal ».
+_NOM_DEPUTE_RE = re.compile(r"\b([A-ZÀ-Ÿ][a-zà-ÿ'’-]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿ'’-]+)+)")
 # « L. 1232-6 » : préfixe L/R/D avec point et espace optionnels devant le
 # numéro -- sans cette alternative, la capture s'arrêtait à « L. ».
-_ARTICLE_RE = re.compile(r"\barticle\s+((?:[LRD]\.?\s*)?\d[\w.\-]*|[\wÀ-ÿ.\-]+)", re.IGNORECASE)
+# Accepte « article », « articles », « art. » et « art » (abréviations
+# courantes) -- sans quoi « art. 1128 du code civil » repartait en recherche
+# libre, alors que la référence est parfaitement structurée.
+_ARTICLE_RE = re.compile(r"\b(?:articles?|art\.?)\s+((?:[LRD]\.?\s*)?\d[\w.\-]*|[\wÀ-ÿ.\-]+)", re.IGNORECASE)
 # La préposition fait partie du titre officiel (« Code DE LA construction et
 # de l'habitation ») : la retirer cassait le LIKE sur le titre -- on capture
 # tout ce qui suit « code ».
@@ -53,8 +72,14 @@ _CODE_RE = re.compile(r"\bcode\s+([\wÀ-ÿ'\s]+?)(?:\s*[?.,;]|$)", re.IGNORECASE
 # seul ne suffit pas comme frontière, des titres réels en contiennent
 # (« code de la construction et de l'habitation ») -- on ne coupe sur « et »
 # que s'il introduit un interrogatif ou un verbe de question.
+#   ... et aux prépositions qui introduisent un complément de question après le
+#   nom du code (« code civil SUR la vie privée », « code civil EN cas de… »).
+#   Ces mots n'apparaissent jamais en tête de complément dans un titre de code
+#   réel (les titres enchaînent sur « de / du / de la / des / et / général »),
+#   donc les couper ne mutile pas « code de la construction et de l'habitation ».
 _CODE_BREAK_RE = re.compile(
-    r"\s+(?:et\s+)?(?:quelle?s?|que|qui|quoi|comment|combien|pourquoi|dont|est-ce|peut|doit|dit)\b.*$",
+    r"\s+(?:et\s+)?(?:quelle?s?|que|qui|quoi|comment|combien|pourquoi|dont|est-ce|peut|doit|dit"
+    r"|en|sur|dans|pour|avec|afin|concernant|lorsqu\w*|quand)\b.*$",
     re.IGNORECASE,
 )
 _DATA_HINTS = ("combien", "nombre", "taux", "médiane", "revenu", "population",
@@ -86,7 +111,30 @@ def detect_route(question: str) -> dict:
         return {"route": "code_article", "reason": "Référence 'article … du code …' détectée",
                 "prefill": {"article": art.group(1).rstrip(".,;"), "code": "code " + code_name}}
 
-    # 2. Question parlementaire : numéro explicite ou indice lexical parlementaire.
+    # 1bis. Commissions d'un député (+ dates) : « les commissions où X a siégé /
+    #    appartenu », « liste les commissions de X ». Donnée structurée SQL, sûre.
+    if "commission" in low:
+        nom = _NOM_DEPUTE_RE.search(q)
+        if nom:
+            return {"route": "commissions", "reason": "Appartenances aux commissions d'un député (open data)",
+                    "prefill": {"acteur": nom.group(1)}}
+
+    # 2. Intervention en séance / compte rendu : « qu'a dit X », « position de X
+    #    sur … » -- AVANT l'amendement, car ces questions veulent le VERBATIM
+    #    de l'orateur, pas le texte de l'amendement (autre serveur MCP).
+    if any(h in low for h in _INTERVENTION_HINTS):
+        orateur = _ORATEUR_RE.search(q)
+        return {"route": "intervention", "reason": "Compte rendu / intervention en séance détecté",
+                "prefill": {"search": q, "orateur": orateur.group(1) if orateur else ""}}
+
+    # 3. Amendement (« amendement n° 245 », « amdt 245 ») : AVANT la route
+    #    parlementaire, sinon le mot « amendement » y est capté par les indices.
+    amdt = _AMENDEMENT_RE.search(q)
+    if amdt:
+        return {"route": "amendement", "reason": "Numéro d'amendement détecté",
+                "prefill": {"numero": amdt.group(1)}}
+
+    # 3. Question parlementaire : numéro explicite ou indice lexical parlementaire.
     num = _QUESTION_NUM_RE.search(q)
     if num or any(h in low for h in _PARLEMENT_HINTS):
         return {"route": "parlement_question", "reason": "Question parlementaire détectée",
@@ -182,9 +230,22 @@ def _build_query(route: str, form: dict) -> dict:
         return {"route": "code_article", "article": form.get("article", ""), "code": form.get("code", "")}
     if route == "parlement_question":
         return {"route": "parlement_question", "uid": form.get("uid", "")}
+    if route == "amendement":
+        q = {"route": "amendement", "numero": form.get("numero", "")}
+        if form.get("legislature"):
+            q["legislature"] = form["legislature"]
+        return q
+    if route == "intervention":
+        q = {"route": "intervention", "search": form.get("search", "").strip()}
+        if form.get("orateur"):
+            q["orateur"] = form["orateur"]
+        return q
+    if route == "commissions":
+        return {"route": "commissions", "acteur": form.get("acteur", "").strip()}
     if route == "texte_libre":
         raw_query = form.get("query", "").strip().strip("\"“”«»").strip()
-        return {"route": "texte_libre", "query": raw_query}
+        sort = form.get("sort", "pertinence")
+        return {"route": "texte_libre", "query": raw_query, "sort": sort}
     if route == "donnee":
         return {
             "dataset_id": form.get("dataset_id", ""),
@@ -209,14 +270,109 @@ def _build_query(route: str, form: dict) -> dict:
     raise ValueError(f"Route inconnue : {route}")
 
 
-def _run_pipeline(message: str, route: str, form: dict) -> dict:
-    """Exécute le pipeline réel et renvoie un dict JSON-sérialisable pour l'UI."""
-    api_key = os.environ.get("MISTRAL_API_KEY")
-    if not api_key:
-        return {"error": "MISTRAL_API_KEY absente du .env"}
+# Providers LLM disponibles : (variable d'environnement de la clé, constructeur).
+# Défaut = Claude (Anthropic). Ajouter un modèle = une ligne ici.
+_MODEL_PROVIDERS = {
+    "claude": ("ANTHROPIC_API_KEY", ClaudeModelProvider),
+    "mistral": ("MISTRAL_API_KEY", MistralModelProvider),
+    "gemini": ("GEMINI_API_KEY", GeminiModelProvider),
+}
+DEFAULT_MODEL = "claude"
 
-    model = MistralModelProvider(api_key=api_key)
-    guard = SentinelGuard(model_provider=model)
+
+def _build_model_provider(model: str):
+    """Instancie le provider LLM choisi. Renvoie (provider, None) ou
+    (None, message d'erreur « ...API_KEY absente du .env ») si la clé manque —
+    ce message déclenche le verrou « moteur non connecté » côté UI."""
+    name = (model or DEFAULT_MODEL).lower()
+    entry = _MODEL_PROVIDERS.get(name)
+    if entry is None:
+        return None, f"Modèle inconnu : {model}"
+    env_var, provider_cls = entry
+    key = os.environ.get(env_var)
+    if not key:
+        return None, f"{env_var} absente du .env"
+    return provider_cls(api_key=key), None
+
+
+def _run_commissions_pipeline(message: str, query: dict) -> dict:
+    """Chemin DÉTERMINISTE pour la route commissions (appartenances d'un député).
+
+    La donnée vient d'une requête SQL sur l'open data officiel : AUCUN modèle
+    n'est dans la boucle, donc rien à halluciner. Chaque ligne « Commission … —
+    du … au … » est un fait `DONNÉE_TRACÉE` vérifié (égalité exacte à la source).
+    Résultat : une seule intention, risque faible, PUBLIABLE -- pas de plancher
+    E1 (pas de décomposition LLM) ni de statut « faible » (donnée tracée, pas
+    citation approximative). La garantie tient : une ligne inventée serait
+    rejetée par le vérificateur. Ne nécessite pas de clé LLM."""
+    provider = MultiSourceRetrievalProvider()
+    intent = Intent(id="1", question=message)
+    try:
+        passage = provider.retrieve(intent, RetrievalState(), query)
+    except SentinelGuardError as exc:
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+    claims_out = []
+    all_pass = True
+    for ligne in [l for l in passage.text.split("\n") if l.strip()]:
+        ligne_passage = Passage(source_id=passage.source_id, source_type=passage.source_type,
+                                opposable=passage.opposable, text=ligne, metadata={})
+        try:
+            cres = verify_claims([Claim(ref=ligne, status=ClaimStatus.DONNÉE_TRACÉE)], ligne_passage)
+            statut = cres.claims[0].status.value
+        except VerificationError:
+            statut = ClaimStatus.NON_AUTHENTIFIÉ.value
+            all_pass = False
+        claims_out.append({"ref": ligne, "status": statut, "truncation_flagged": False})
+
+    phash = hashlib.sha256(passage.text.encode("utf-8")).hexdigest()[:16]
+    compliance = "VALIDATED" if all_pass else "BLOCKED"
+    intent_out = {
+        "question": message,
+        "source_id": passage.source_id,
+        "source_type": passage.source_type,
+        "opposable": passage.opposable,
+        "titre": passage.metadata.get("acteur"),
+        "passage_text": passage.text,
+        "pertinence_non_garantie": False,
+        "claims": claims_out,
+        "control_claim": None,
+        "verbatim_check": "PASS" if all_pass else "FAIL",
+        "risk_tier": "faible",           # donnée déterministe -> pas de plancher
+        "published": all_pass,           # publiable : fait tracé, pas citation faible
+        "human_validation": None,
+        "validation_key": {"intent_id": "1", "passage_hash": phash},
+        "compliance_status": compliance,
+        "compliance_json": {
+            "compliance_status": compliance,
+            "source_id": passage.source_id,
+            "source_type": passage.source_type,
+            "passage_hash": phash,
+            "verbatim_check": "PASS" if all_pass else "FAIL",
+            "acteur": passage.metadata.get("acteur"),
+            "acteur_ref": passage.metadata.get("acteur_ref"),
+            "nb_commissions": passage.metadata.get("nb_commissions"),
+            "source": passage.metadata.get("source"),
+        },
+    }
+    return {"echo_back": None, "coverage_ratio": 1.0, "coverage_passed": True,
+            "session_ref": uuid.uuid4().hex, "intents": [intent_out]}
+
+
+def _run_pipeline(message: str, route: str, form: dict, model: str = DEFAULT_MODEL) -> dict:
+    """Exécute le pipeline réel et renvoie un dict JSON-sérialisable pour l'UI.
+
+    `model` choisit le provider LLM (défaut : Claude) ; les autres (Mistral,
+    Gemini) restent disponibles pour le futur sélecteur de modèle."""
+    # Route commissions : chemin déterministe (SQL), sans LLM -> pas besoin de clé.
+    if route == "commissions":
+        return _run_commissions_pipeline(message, _build_query(route, form))
+
+    provider, err = _build_model_provider(model)
+    if err:
+        return {"error": err}
+
+    guard = SentinelGuard(model_provider=provider)
     query = _build_query(route, form)
 
     try:

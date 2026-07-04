@@ -4,9 +4,9 @@ from pathlib import Path
 workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard.calibration import Annotation, run_calibration
-from sentinel_guard.measurement import REFUS
-from sentinel_guard.trap_dataset import TRAP_DATASET
+from sentinel_guard.analysis.calibration import Annotation, run_calibration
+from sentinel_guard.analysis.measurement import REFUS
+from sentinel_guard.analysis.trap_dataset import TRAP_DATASET
 
 
 def main() -> None:

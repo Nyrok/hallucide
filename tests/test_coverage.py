@@ -1,5 +1,5 @@
-from sentinel_guard.coverage import build_echo_back, check_coverage
-from sentinel_guard.types import Intent
+from sentinel_guard._2_coverage.coverage import build_echo_back, check_coverage
+from sentinel_guard.core_types.types import Intent
 
 
 def test_coverage_passes_when_intents_cover_message() -> None:

@@ -4,9 +4,9 @@ from pathlib import Path
 workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard.datagouv import DataGouvRetrievalProvider
-from sentinel_guard.types import Claim, ClaimStatus, Intent, RetrievalState
-from sentinel_guard.verifier import verify_claims
+from sentinel_guard._3_retrieval.datagouv import DataGouvRetrievalProvider
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, RetrievalState
+from sentinel_guard._4_verification.verifier import verify_claims
 
 
 def main() -> None:

@@ -4,16 +4,16 @@ from pathlib import Path
 workspace_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(workspace_root / "src"))
 
-from sentinel_guard.audit import build_compliance_log
-from sentinel_guard.moulineuse import MoulineuseRetrievalProvider
-from sentinel_guard.orchestration import Orchestrator
-from sentinel_guard.sovereign_log import (
+from sentinel_guard._7_audit.audit import build_compliance_log
+from sentinel_guard._3_retrieval.moulineuse import MoulineuseRetrievalProvider
+from sentinel_guard._1_decomposition.orchestration import Orchestrator
+from sentinel_guard._7_audit.sovereign_log import (
     SovereignLogStore,
     build_access_log_entry,
     generate_session_ref,
 )
-from sentinel_guard.triage import RiskTier
-from sentinel_guard.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
+from sentinel_guard._5_triage.triage import RiskTier
+from sentinel_guard.core_types.types import Claim, ClaimStatus, Intent, Passage, RetrievalState
 
 
 class SingleIntentDecomposer:

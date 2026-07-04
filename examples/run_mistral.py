@@ -32,8 +32,8 @@ from sentinel_guard import (
     RetrievalState,
     RiskTier,
 )
-from sentinel_guard.retrieval import RetrievalProvider
-from sentinel_guard.types import Intent, Passage
+from sentinel_guard._3_retrieval.retrieval import RetrievalProvider
+from sentinel_guard.core_types.types import Intent, Passage
 
 
 class DummyRetrievalProvider(RetrievalProvider):
