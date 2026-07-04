@@ -45,6 +45,13 @@ from ._3_retrieval.multi_source import MultiSourceRetrievalProvider
 from ._1_decomposition.orchestration import Decomposer, IntentGenerator, Orchestrator
 from ._3_retrieval.retrieval import RetrievalProvider, advance_retrieval
 from ._4_verification.slot_provenance import SlotProvenance, check_slot_provenance
+from ._4_verification.semantic_similarity import (
+    DEFAULT_DISTANCE_THRESHOLD,
+    any_distant_reformulation,
+    is_distant_reformulation,
+    semantic_floor_conditions,
+    similarity_score,
+)
 from ._7_audit.sovereign_log import (
     AccessLogEntry,
     NonCorrelationViolation,
@@ -87,6 +94,11 @@ __all__ = [
     "check_coverage",
     "SlotProvenance",
     "check_slot_provenance",
+    "similarity_score",
+    "is_distant_reformulation",
+    "semantic_floor_conditions",
+    "any_distant_reformulation",
+    "DEFAULT_DISTANCE_THRESHOLD",
     "CaseResult",
     "MeasurementReport",
     "TrapCase",

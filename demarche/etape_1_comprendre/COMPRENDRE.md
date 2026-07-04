@@ -208,12 +208,22 @@ Deux cas réels déjà joués (voir `README.md`) qui matérialisent la garantie 
 
 ---
 
-## 7. Ce qui a été touché cette nuit (transparence)
+## 7. Ce qui a été touché (transparence)
 
-Le cahier impose : **ne pas modifier le moteur** (`src/sentinel_guard/`). Respecté.
-Aucune ligne de `src/sentinel_guard/` n'a changé.
+**Mise à jour du 4 juillet** : sur décision de l'équipe, on est passé de « ne rien
+toucher au moteur » à « étendre le moteur de façon additive et prouvée ». Deux
+changements dans `src/sentinel_guard/`, tous deux **additifs** (rien de retiré,
+comportement d'origine inchangé, 175 tests d'origine préservés) :
 
-**Une seule modification hors moteur, nécessaire pour que l'install fonctionne :**
+- **Réorganisation par étapes** : les 27 modules rangés en dossiers `_1_…` à
+  `_7_…` + `core_types/`, `llm_providers/`, `analysis/` (voir `REORGANISATION.md`
+  à la racine). Aucune logique modifiée, seulement des déplacements + imports.
+- **Nouveau module `_4_verification/semantic_similarity.py`** (étape 8, Path A) :
+  proximité de reformulation déterministe (Jaccard tokens + trigrammes), sans ML.
+  Additif : il ne peut qu'**augmenter** le risque, jamais authentifier. 16 tests
+  dédiés (`tests/test_semantic_similarity.py`). Détail : `PROCESSUS_FINAL.md`.
+
+**Modification d'emballage (hors moteur), nécessaire pour l'install :**
 
 - **`pyproject.toml`** : le champ `authors` était au format Poetry (`["… <email>"]`),
   invalide pour setuptools/PEP 621 → l'installation `pip install -e .[test]`
