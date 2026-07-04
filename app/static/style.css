@@ -21,6 +21,8 @@ body { margin: 0; }
   display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
   padding: 1rem 0; border-bottom: 1px solid var(--border-default-grey);
 }
+.hd-header__logo { height: 3rem; width: auto; }
+.hd-header__brand { display: flex; align-items: center; gap: .9rem; }
 .hd-header__title { font-size: 1.375rem; font-weight: 700; margin: 0; }
 .hd-header__tagline { font-size: .75rem; color: var(--text-mention-grey); margin: 0; }
 .hd-header__controls { margin-left: auto; display: flex; gap: .5rem; }
