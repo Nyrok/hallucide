@@ -17,3 +17,4 @@ venv/
 .vscode/*
 !.vscode/settings.json
 src/*.egg-info/
+hallucide.egg-info/

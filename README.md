@@ -9,7 +9,7 @@ non vérifiée présentée comme un fait : le verdict vient de la source, jamais
 Le moteur de vérification s'appelle Hallucide (`src/`). C'est un pipeline
 déterministe : décomposition de la question, récupération des passages officiels,
 vérification verbatim, plancher de risque, validation humaine, journal d'audit.
-Spécification : `docs/spec-v4.md`. Statut d'implémentation : `docs/STATUS.md`.
+Spécification et statut d'implémentation : PDF dans `hackathon-an-2026/docs/`.
 
 Projet du hackathon de l'Assemblée nationale 2026, défi « IA et Hallucination » :
 voir `hackathon-an-2026/DEFI.md`.
@@ -44,10 +44,7 @@ app/                front de chat DSFR + backend HTTP (python -m app.server)
 src/                moteur Hallucide, rangé par étape du pipeline
 tests/              pytest (make test)
 ui/                 démonstrateur historique (python -m ui.server, port 8765)
-mock/               maquette statique DSFR de référence
-examples/           scripts exécutables par fonctionnalité du moteur
-docs/               spec v4, statut, design, docs moteur
-hackathon-an-2026/  fiche défi du hackathon
+hackathon-an-2026/  fiche défi, documents PDF et images du hackathon
 ```
 
 ## Architecture
@@ -105,14 +102,6 @@ make test
 
 220 tests automatisés, dont le mode document v4 (INV-015/016/017, piège B5) et
 les commissions ciblées. Deux scénarios ont aussi été joués en direct contre les
-sources réelles (voir `docs/STATUS.md`) : prémisse fausse sans hallucination
+sources réelles : prémisse fausse sans hallucination
 (`NO_ANSWER`), et passage authentique mais hors sujet bloqué par le plancher E1.
 
-## Exemples
-
-Scripts exécutables dans `examples/`, un par fonctionnalité du moteur
-(Moulineuse et data.gouv ne demandent pas de clé) :
-
-```bash
-python examples/run_hallucide.py
-```

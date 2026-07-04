@@ -39,7 +39,7 @@ app/
 │                      (déterministe, testable : python -m app.presentation)
 └── static/            front DSFR (CDN 1.14.4, comportement JS maison)
     ├── index.html     en-tête, fil de chat, saisie, panneau de traçabilité
-    ├── style.css      layout chatbox + classes hd-* partagées avec mock/
+    ├── style.css      layout chatbox + classes hd-* (couleurs de statut)
     └── app.js         /resolve puis /ask, prose annotée, donut, accordéons
 ```
 
