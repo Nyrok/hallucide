@@ -43,6 +43,14 @@ HTML_PAGE = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
 _QUESTION_NUM_RE = re.compile(r"\b(?:qosd|qe|qg|question(?:\s+orale)?)\D{0,20}?(\d{2,6})\b", re.IGNORECASE)
 # « amendement n° 245 », « amendement 245 », « amdt 245 »
 _AMENDEMENT_RE = re.compile(r"\b(?:amendements?|amdt)\s*(?:n[°o]\.?\s*)?(\d{1,5})\b", re.IGNORECASE)
+# Compte rendu / intervention en séance : « qu'a dit X », « position de X sur … »
+_INTERVENTION_HINTS = ("compte rendu", "compte-rendu", "en séance", "en seance", "qu'a dit",
+                       "qu a dit", "position de", "position du", "intervention de",
+                       "s'est exprimé", "a déclaré", "a defendu", "a défendu", "propos de")
+# Nom d'orateur après un déclencheur (M./Mme/de/du/par) : « de Darmanin »,
+# « M. Gérald Darmanin ». On garde 1 à 3 mots capitalisés.
+_ORATEUR_RE = re.compile(r"(?:M\.|Mme|monsieur|madame|de|du|par)\s+"
+                         r"([A-ZÀ-Ÿ][\wÀ-ÿ'’-]+(?:\s+[A-ZÀ-Ÿ][\wÀ-ÿ'’-]+){0,2})")
 # « L. 1232-6 » : préfixe L/R/D avec point et espace optionnels devant le
 # numéro -- sans cette alternative, la capture s'arrêtait à « L. ».
 # Accepte « article », « articles », « art. » et « art » (abréviations
@@ -98,7 +106,15 @@ def detect_route(question: str) -> dict:
         return {"route": "code_article", "reason": "Référence 'article … du code …' détectée",
                 "prefill": {"article": art.group(1).rstrip(".,;"), "code": "code " + code_name}}
 
-    # 2. Amendement (« amendement n° 245 », « amdt 245 ») : AVANT la route
+    # 2. Intervention en séance / compte rendu : « qu'a dit X », « position de X
+    #    sur … » -- AVANT l'amendement, car ces questions veulent le VERBATIM
+    #    de l'orateur, pas le texte de l'amendement (autre serveur MCP).
+    if any(h in low for h in _INTERVENTION_HINTS):
+        orateur = _ORATEUR_RE.search(q)
+        return {"route": "intervention", "reason": "Compte rendu / intervention en séance détecté",
+                "prefill": {"search": q, "orateur": orateur.group(1) if orateur else ""}}
+
+    # 3. Amendement (« amendement n° 245 », « amdt 245 ») : AVANT la route
     #    parlementaire, sinon le mot « amendement » y est capté par les indices.
     amdt = _AMENDEMENT_RE.search(q)
     if amdt:
@@ -205,6 +221,11 @@ def _build_query(route: str, form: dict) -> dict:
         q = {"route": "amendement", "numero": form.get("numero", "")}
         if form.get("legislature"):
             q["legislature"] = form["legislature"]
+        return q
+    if route == "intervention":
+        q = {"route": "intervention", "search": form.get("search", "").strip()}
+        if form.get("orateur"):
+            q["orateur"] = form["orateur"]
         return q
     if route == "texte_libre":
         raw_query = form.get("query", "").strip().strip("\"“”«»").strip()

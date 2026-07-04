@@ -5,6 +5,7 @@ from typing import Any
 from sentinel_guard._3_retrieval.datagouv import DataGouvRetrievalProvider
 from sentinel_guard.core_types.exceptions import RetrievalError
 from sentinel_guard._3_retrieval.file_retrieval import FileRetrievalProvider
+from sentinel_guard._3_retrieval.interventions import InterventionsRetrievalProvider
 from sentinel_guard._3_retrieval.moulineuse import MoulineuseRetrievalProvider
 from sentinel_guard.core_types.types import Intent, Passage, RetrievalState
 
@@ -30,12 +31,18 @@ class MultiSourceRetrievalProvider:
         moulineuse: MoulineuseRetrievalProvider | None = None,
         datagouv: DataGouvRetrievalProvider | None = None,
         file_provider: FileRetrievalProvider | None = None,
+        interventions: InterventionsRetrievalProvider | None = None,
     ) -> None:
         self.moulineuse = moulineuse or MoulineuseRetrievalProvider()
         self.datagouv = datagouv or DataGouvRetrievalProvider()
         self.file_provider = file_provider or FileRetrievalProvider()
+        self.interventions = interventions or InterventionsRetrievalProvider()
 
     def retrieve(self, intent: Intent, state: RetrievalState, query: dict[str, Any]) -> Passage:
+        # La route "intervention" (comptes rendus verbatim) vit sur un AUTRE
+        # serveur MCP (parlement.tricoteuses.fr), d'où l'aiguillage explicite.
+        if query.get("route") == "intervention":
+            return self.interventions.retrieve(intent, state, query)
         if "route" in query:
             return self.moulineuse.retrieve(intent, state, query)
         if "filters" in query:
