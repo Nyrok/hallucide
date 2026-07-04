@@ -132,6 +132,20 @@ def detect_route(question: str) -> dict:
         return {"route": "code_article", "reason": "Référence 'article … du code …' détectée",
                 "prefill": {"article": art.group(1).rstrip(".,;"), "code": "code " + code_name}}
 
+    # 1bis-a. Mandat de député : « X est-il député ? », « X est-elle sénatrice ? »,
+    #    « est-ce que X est député ». Donnée structurée (annuaire acteurs), sans LLM.
+    m_mandat = re.search(r"^(?:est[- ]ce que\s+)?(.+?)\s+est[- ](?:il|elle)\s+(?:un[e]?\s+)?(?:député|députée|sénateur|sénatrice)", q, re.IGNORECASE)
+    if not m_mandat:
+        m_mandat = re.search(r"(?:député|députée)\s*\?", q, re.IGNORECASE) and _NOM_DEPUTE_RE.search(q) and None or None
+    if m_mandat:
+        acteur = m_mandat.group(1).strip().rstrip(",")
+        # garde le nom propre final si la tournure inclut du contexte
+        nom = _NOM_DEPUTE_RE.search(acteur)
+        if nom:
+            acteur = nom.group(1)
+        return {"route": "mandat", "reason": "Question sur le mandat d'un acteur (open data)",
+                "prefill": {"acteur": acteur}}
+
     # 1bis. Commissions d'un député (+ dates) : « les commissions où X a siégé /
     #    appartenu », « liste les commissions de X ». Donnée structurée SQL, sûre.
     if "commission" in low:
@@ -265,6 +279,8 @@ def _build_query(route: str, form: dict) -> dict:
         if form.get("orateur"):
             q["orateur"] = form["orateur"]
         return q
+    if route == "mandat":
+        return {"route": "mandat", "acteur": form.get("acteur", "").strip()}
     if route == "commissions":
         q = {"route": "commissions", "acteur": form.get("acteur", "").strip()}
         if form.get("commission"):
@@ -393,7 +409,7 @@ def _run_pipeline(message: str, route: str, form: dict, model: str = DEFAULT_MOD
     `model` choisit le provider LLM (défaut : Claude) ; les autres (Mistral,
     Gemini) restent disponibles pour le futur sélecteur de modèle."""
     # Route commissions : chemin déterministe (SQL), sans LLM -> pas besoin de clé.
-    if route == "commissions":
+    if route in ("commissions", "mandat"):
         return _run_commissions_pipeline(message, _build_query(route, form))
 
     provider, err = _build_model_provider(model)

@@ -194,9 +194,11 @@ class MoulineuseRetrievalProvider:
             return self._retrieve_amendement(query)
         if route == "commissions":
             return self._retrieve_commissions(query)
+        if route == "mandat":
+            return self._retrieve_mandat(query)
         raise RetrievalError(
             f"Unknown or missing route '{route}'; expected 'pastille', 'code_article', "
-            "'texte_libre', 'parlement_question', 'amendement' or 'commissions'."
+            "'texte_libre', 'parlement_question', 'amendement', 'commissions' or 'mandat'."
         )
 
     # SQL (recette Tricoteuses) : les mandats sont dans acteurs.data->'mandats',
@@ -277,6 +279,56 @@ class MoulineuseRetrievalProvider:
                 "toutes_appartenances": lignes,  # liste complète (traçabilité)
                 "source": "Open data Assemblée nationale (mandats)",
             },
+        )
+
+    _MANDATS_SQL = """
+        SELECT DISTINCT
+               o.data->>'libelle' AS libelle,
+               m->'infosQualite'->>'libQualiteSex' AS qualite,
+               m->>'dateDebut' AS date_debut,
+               m->>'dateFin' AS date_fin
+        FROM assemblee.acteurs a
+        CROSS JOIN LATERAL jsonb_array_elements(a.data->'mandats') AS m
+        CROSS JOIN LATERAL jsonb_array_elements_text(m->'organesRefs') AS oref
+        JOIN assemblee.organes o ON o.uid = oref
+        WHERE a.uid = $1
+          AND o.data->>'codeType' = 'ASSEMBLEE'
+        ORDER BY date_debut;
+    """
+
+    def _retrieve_mandat(self, query: dict[str, str]) -> Passage:
+        # Mandats de député d'un acteur (open data Assemblée). Même contrat que
+        # la route commissions : donnée déterministe, acte administratif ->
+        # opposable=False. L'ABSENCE de mandat est aussi une réponse tracée :
+        # « X est-il député ? » -> non, aucun mandat dans la donnée officielle.
+        acteur = (query.get("acteur") or "").strip()
+        acteur_ref = query.get("acteur_ref") or (self._resolve_acteur(acteur) if acteur else None)
+
+        lignes: list[str] = []
+        if acteur_ref:
+            result = self.client.call_tool(
+                "query_sql", {"schema": "assemblee", "query": self._MANDATS_SQL, "params": [acteur_ref]}
+            )
+            for r in _parse_sql_rows(result):
+                qualite = (r.get("qualite") or "Député").strip()
+                debut = _date_seule(r.get("date_debut")) or "?"
+                fin = _date_seule(r.get("date_fin")) or "en cours"
+                lignes.append(f"{(r.get('libelle') or 'Assemblée nationale').strip()} — {qualite} — du {debut} au {fin}")
+            lignes = list(dict.fromkeys(lignes))
+
+        if not lignes:
+            lignes = [f"Aucun mandat de député trouvé pour « {acteur or acteur_ref} » "
+                      "dans l'open data officiel de l'Assemblée nationale."]
+
+        texte = "\n".join(lignes)
+        return Passage(
+            source_id=str(acteur_ref or f"acteur:{acteur}"),
+            source_type="mandat",
+            opposable=False,
+            text=texte,
+            metadata={"acteur": acteur or None, "acteur_ref": acteur_ref,
+                      "nb_mandats": len(lignes) if acteur_ref else 0,
+                      "source": "assemblee.acteurs (open data officiel)"},
         )
 
     def _resolve_acteur(self, name: str) -> str | None:
